@@ -65,8 +65,8 @@ Running `install` with no arguments walks you through three prompts:
   ◉ sf-testing
 
 ? Select the target IDE(s) / tool(s)
-  ◉ Claude Code — project (./.claude/skills/user)
-  ◯ Claude Code — global (~/.claude/skills/user)
+  ◉ Claude Code — project (./.claude/skills)
+  ◯ Claude Code — global (~/.claude/skills)
   ◯ Cursor (./.cursor/rules)
   ◯ Windsurf (./.windsurf/rules)
   ◯ GitHub Copilot (./.github/instructions)
@@ -122,8 +122,8 @@ The CLI prints a reminder after install if any placeholder was left unresolved.
 
 | Target | Destination | Trigger behavior |
 |---|---|---|
-| **Claude Code** (project) | `./.claude/skills/user/<skill>/SKILL.md` | Auto-triggered — Claude reads the `description` frontmatter and invokes the skill only when the task matches |
-| **Claude Code** (global) | `~/.claude/skills/user/<skill>/SKILL.md` | Same as above, applies across every project on your machine |
+| **Claude Code** (project) | `./.claude/skills/<skill>/SKILL.md` | Auto-triggered — Claude reads the `description` frontmatter and invokes the skill only when the task matches |
+| **Claude Code** (global) | `~/.claude/skills/<skill>/SKILL.md` | Same as above, applies across every project on your machine |
 | **Cursor** | `./.cursor/rules/<skill>.mdc` | Project rule (`alwaysApply: false`) — Cursor decides relevance from the `description` field |
 | **Windsurf** | `./.windsurf/rules/<skill>.md` | Cascade rule (`trigger: model_decision`) — same idea, Windsurf's own matching |
 | **GitHub Copilot** | `./.github/instructions/<skill>.instructions.md` | Custom instructions (`applyTo: "**"`) — applied repo-wide, no per-task trigger |

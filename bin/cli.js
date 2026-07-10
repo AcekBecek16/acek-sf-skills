@@ -13,14 +13,14 @@ const SKILLS_SRC = path.join(__dirname, '../skills');
 // Where each target/tool expects its instruction files, and how to format them.
 const TARGETS = {
 	'claude-project': {
-		label: 'Claude Code — project (./.claude/skills/user)',
-		dir: (cwd) => path.join(cwd, '.claude/skills/user'),
+		label: 'Claude Code — project (./.claude/skills)',
+		dir: (cwd) => path.join(cwd, '.claude/skills'),
 		format: 'claude',
 		selected: true,
 	},
 	'claude-global': {
-		label: 'Claude Code — global (~/.claude/skills/user)',
-		dir: () => path.join(os.homedir(), '.claude/skills/user'),
+		label: 'Claude Code — global (~/.claude/skills)',
+		dir: () => path.join(os.homedir(), '.claude/skills'),
 		format: 'claude',
 		selected: false,
 	},
