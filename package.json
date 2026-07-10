@@ -1,33 +1,9 @@
 {
-	"name": "acek-skills",
-	"version": "1.0.1",
-	"description": "Installable Claude Code skills for Salesforce development (admin, dev, BA, testing, devops, security review, data migration, ideation)",
-	"bin": {
-		"acek-skills": "bin/cli.js"
-	},
-	"files": [
-		"bin/",
-		"skills/"
+	"name": "acek-sf-skills",
+	"private": true,
+	"description": "Monorepo for installable Claude Code skills — acek-skills (Salesforce roles) and shaiden (LWC design craft)",
+	"workspaces": [
+		"packages/*"
 	],
-	"keywords": [
-		"claude",
-		"claude-code",
-		"skills",
-		"salesforce"
-	],
-	"engines": {
-		"node": ">=14"
-	},
-	"dependencies": {
-		"prompts": "^2.4.2"
-	},
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/AcekBecek16/acek-sf-skills.git"
-	},
-	"homepage": "https://github.com/AcekBecek16/acek-sf-skills#readme",
-	"bugs": {
-		"url": "https://github.com/AcekBecek16/acek-sf-skills/issues"
-	}
+	"license": "MIT"
 }

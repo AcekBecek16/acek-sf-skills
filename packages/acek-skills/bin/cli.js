@@ -10,6 +10,17 @@ const target = args[1]; // optional: specific skill name, or "--all"
 
 const SKILLS_SRC = path.join(__dirname, '../skills');
 
+function printBanner() {
+	console.log(`\x1b[36m
+  ____  _  _____ _     _     ____
+ / ___|| |/ /_ _| |   | |   / ___|
+ \\___ \\| ' / | || |   | |   \\___ \\
+  ___) | . \\ | || |___| |___ ___) |
+ |____/|_|\\_\\___|_____|_____|____/\x1b[0m
+\x1b[2mSalesforce skills for Claude Code\x1b[0m
+`);
+}
+
 // Where each target/tool expects its instruction files, and how to format them.
 const TARGETS = {
 	'claude-project': {
@@ -46,9 +57,12 @@ const TARGETS = {
 
 // Copies a skill directory, substituting org-alias placeholders in any
 // Markdown file along the way (binary/other files are copied as-is).
-function copySkillDir(src, dest, aliases) {
+// `skip` excludes filenames at the top level (used to drop SKILL.md when
+// mirroring a skill's supporting files next to a converted rule file).
+function copySkillDir(src, dest, aliases, skip = new Set()) {
 	fs.mkdirSync(dest, { recursive: true });
 	for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+		if (skip.has(entry.name)) continue;
 		const srcPath = path.join(src, entry.name);
 		const destPath = path.join(dest, entry.name);
 		if (entry.isDirectory()) {
@@ -148,6 +162,20 @@ function installSkillToTarget(skillName, targetKey, cwd, aliases = {}) {
 		path.join(destDir, `${skillName}${EXT[targetDef.format]}`),
 		content,
 	);
+
+	// Carry over supporting files (e.g. references/) alongside the converted
+	// rule file — these tools don't have Claude Code's skill directory, so we
+	// mirror it as <skillName>/ next to the main rule file.
+	const skillDir = path.join(SKILLS_SRC, skillName);
+	const extras = fs.readdirSync(skillDir).filter((f) => f !== 'SKILL.md');
+	if (extras.length > 0) {
+		copySkillDir(
+			skillDir,
+			path.join(destDir, skillName),
+			aliases,
+			new Set(['SKILL.md']),
+		);
+	}
 }
 
 function aliasesFromEnv() {
@@ -171,6 +199,8 @@ function warnIfAliasesUnresolved(skillNames, aliases) {
 }
 
 async function runInteractiveInstall() {
+	printBanner();
+
 	let prompts;
 	try {
 		prompts = require('prompts');
@@ -254,6 +284,7 @@ async function runInteractiveInstall() {
 async function main() {
 	if (command === 'install') {
 		if (target === '--all') {
+			printBanner();
 			const available = listSkills();
 			const aliases = aliasesFromEnv();
 			for (const skill of available) {
@@ -264,6 +295,7 @@ async function main() {
 			);
 			warnIfAliasesUnresolved(available, aliases);
 		} else if (target) {
+			printBanner();
 			const available = listSkills();
 			if (!available.includes(target)) {
 				console.error(

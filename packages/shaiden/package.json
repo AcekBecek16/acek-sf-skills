@@ -1,0 +1,37 @@
+{
+	"name": "shaiden",
+	"version": "0.1.0",
+	"description": "Shaiden (紫電) — installable Claude Code skill for LWC Design Precision: SLDS 2 tokens, component craft/critique/polish workflow, and design system consistency",
+	"bin": {
+		"shaiden": "bin/cli.js"
+	},
+	"files": [
+		"bin/",
+		"skills/"
+	],
+	"keywords": [
+		"claude",
+		"claude-code",
+		"skills",
+		"salesforce",
+		"lwc",
+		"slds",
+		"design-system"
+	],
+	"engines": {
+		"node": ">=14"
+	},
+	"dependencies": {
+		"prompts": "^2.4.2"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/AcekBecek16/acek-sf-skills.git",
+		"directory": "packages/shaiden"
+	},
+	"homepage": "https://github.com/AcekBecek16/acek-sf-skills/tree/master/packages/shaiden#readme",
+	"bugs": {
+		"url": "https://github.com/AcekBecek16/acek-sf-skills/issues"
+	}
+}
