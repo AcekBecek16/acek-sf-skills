@@ -1,6 +1,6 @@
 {
 	"name": "acek-skills",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Installable Claude Code skills for Salesforce development (admin, dev, BA, testing, devops, security review, data migration, ideation)",
 	"bin": {
 		"acek-skills": "bin/cli.js"
