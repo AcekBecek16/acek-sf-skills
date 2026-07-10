@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"description": "Installable Claude Code skills for Salesforce development (admin, dev, BA, testing, devops, security review, data migration, ideation)",
 	"bin": {
-		"acek-skills": "./bin/cli.js"
+		"acek-skills": "bin/cli.js"
 	},
 	"files": [
 		"bin/",
@@ -21,5 +21,13 @@
 	"dependencies": {
 		"prompts": "^2.4.2"
 	},
-	"license": "MIT"
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/AcekBecek16/acek-sf-skills.git"
+	},
+	"homepage": "https://github.com/AcekBecek16/acek-sf-skills#readme",
+	"bugs": {
+		"url": "https://github.com/AcekBecek16/acek-sf-skills/issues"
+	}
 }
