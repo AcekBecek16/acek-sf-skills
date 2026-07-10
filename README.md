@@ -6,7 +6,7 @@ npm packages, each installable on its own via `npx`:
 | Package | What it is | Install |
 |---|---|---|
 | [`acek-skills`](packages/acek-skills) | 8 Salesforce role skills — admin, dev, testing, DevOps, security review, data migration, business analysis, ideation | `npx acek-skills install` |
-| [`shaiden`](packages/shaiden) | LWC Design Precision skill (紫電) — SLDS 2 tokens, craft/critique/polish workflow | `npx shaiden install` |
+| [`shaiden`](packages/shaiden) | LWC Design Precision skill (紫電) — SLDS 2 tokens, craft/critique/polish workflow | `npx @nullbotdotexe/shaiden install` |
 
 They're kept as separate packages on purpose: `acek-skills`' LWC guidance (`sf-dev`) and
 `shaiden`'s design system use different, incompatible styling conventions (see each package's

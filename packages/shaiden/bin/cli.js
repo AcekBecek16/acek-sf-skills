@@ -150,7 +150,7 @@ async function runInteractiveInstall() {
 	} catch {
 		console.error(
 			'❌ Interactive mode requires the "prompts" package, which should have been installed automatically.\n' +
-				'   Try: npx shaiden@latest install',
+				'   Try: npx @nullbotdotexe/shaiden@latest install',
 		);
 		process.exit(1);
 	}

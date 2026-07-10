@@ -5,9 +5,9 @@
 **紫電 · Purple Lightning.**
 An installable [Claude Code](https://claude.com/claude-code) skill for LWC Design Precision — SLDS 2 tokens, a craft/critique/polish workflow, and component-level design system consistency.
 
-[![npm version](https://img.shields.io/npm/v/shaiden.svg)](https://www.npmjs.com/package/shaiden)
-[![license](https://img.shields.io/npm/l/shaiden.svg)](./LICENSE)
-[![node](https://img.shields.io/node/v/shaiden.svg)](https://nodejs.org)
+[![npm version](https://img.shields.io/npm/v/%40nullbotdotexe%2Fshaiden.svg)](https://www.npmjs.com/package/@nullbotdotexe/shaiden)
+[![license](https://img.shields.io/npm/l/%40nullbotdotexe%2Fshaiden.svg)](./LICENSE)
+[![node](https://img.shields.io/node/v/%40nullbotdotexe%2Fshaiden.svg)](https://nodejs.org)
 
 </div>
 
@@ -37,13 +37,15 @@ Every component gets a **1–40 score** across five aspects (visual consistency,
 compliance, typography/spacing precision, UX/accessibility, and human touch), backed by
 `--slds-g-*` global styling hooks — never hardcoded values, never private hooks.
 
-> The npm package is named `shaiden` (`shaiden` was already taken on the registry) — the skill
-> itself, its commands, and its files all use its real name: **shaiden**.
+> The npm package is scoped — `@nullbotdotexe/shaiden` — because npm's registry blocks
+> unscoped names it considers too similar to an existing popular package (in this case,
+> `shadcn`). The skill itself, its commands, and its files all use its real, unscoped name:
+> **shaiden**.
 
 ## Quick start
 
 ```bash
-npx shaiden install
+npx @nullbotdotexe/shaiden install
 ```
 
 Pick which IDE(s)/tool(s) to install into — no skill picker needed, there's only one skill in
@@ -51,7 +53,7 @@ this package.
 
 ```bash
 # Install to Claude Code (project-level), no prompts
-npx shaiden install --all
+npx @nullbotdotexe/shaiden install --all
 ```
 
 ## Command reference
