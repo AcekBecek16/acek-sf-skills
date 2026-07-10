@@ -1,0 +1,25 @@
+{
+	"name": "acek-skills",
+	"version": "1.0.0",
+	"description": "Installable Claude Code skills for Salesforce development (admin, dev, BA, testing, devops, security review, data migration, ideation)",
+	"bin": {
+		"acek-skills": "./bin/cli.js"
+	},
+	"files": [
+		"bin/",
+		"skills/"
+	],
+	"keywords": [
+		"claude",
+		"claude-code",
+		"skills",
+		"salesforce"
+	],
+	"engines": {
+		"node": ">=14"
+	},
+	"dependencies": {
+		"prompts": "^2.4.2"
+	},
+	"license": "MIT"
+}

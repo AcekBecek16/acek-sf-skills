@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# npm
+npm-debug.log*
+*.tgz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+
+# Local env
+.env
+.env.local
+
+# Logs
+*.log
