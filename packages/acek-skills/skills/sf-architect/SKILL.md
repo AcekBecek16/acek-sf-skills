@@ -72,7 +72,7 @@ unrelated features into one plan.
 ## Workflow
 
 ```
-DISCOVERY (grill me) → DECISIONS → PLAN (gate) → EXECUTE task-by-task → RESUME (new session)
+DISCOVERY (grill me) → DECISIONS → PLAN (gate) → EXECUTE in batches (parallel where safe) → RESUME (new session)
 ```
 
 ### Phase 1 — Discovery ("Grill Me")
@@ -138,7 +138,9 @@ Nothing is built yet. This phase only produces decisions with rationale.
 
 1. Compile Discovery + Decisions into the full plan file using the [Plan Template](#plan-template).
 2. Break the work into tasks. Every task gets an ID, a description, an **Owner Skill**, a
-   dependency list, and status `P` (Pending).
+   **Touches** list (exact file(s)/component(s) it will create or modify), a dependency list, and
+   status `P` (Pending). `Touches` is what Phase 4 uses to decide which tasks are safe to run in
+   parallel — be specific and accurate here, not vague.
 3. **If any task's Owner Skill is `sf-devops` or `sf-data-migration`, resolve org aliases before
    finalizing** — see [Org Alias Resolution](#org-alias-resolution) below. Skip this step
    entirely if no task touches those two skills; don't ask about aliases a plan doesn't need.
@@ -177,18 +179,42 @@ commands.
 
 ### Phase 4 — Execute
 
-Work through tasks in dependency order, one at a time:
+Tasks run in **batches**, not strictly one at a time. Within a batch, independent tasks are
+dispatched to parallel subagents; tasks that depend on each other still run in sequence.
 
-1. Announce which task is starting and which Owner Skill's conventions apply.
-2. Set that task's status to `IP` (In Progress) in the plan file.
-3. Do the work following that owner skill's rules exactly as if that skill were invoked directly.
-4. On completion, set status to `D` (Done) and append **one line** to the Execution Log — no
-   narrative, just what changed and where.
-5. If a task cannot proceed (missing decision, blocked dependency, discovered conflict), set
-   status to `B` (Blocked), write a one-line reason, and surface it to the user immediately rather
-   than guessing.
-6. Move to the next unblocked task. If all remaining tasks are blocked, stop and ask the user how
-   to proceed — using the choice format.
+1. **Compute the ready set.** A task is ready when every task in its `Depends On` list is `D`.
+2. **Split the ready set into parallel-safe groups.** Two ready tasks can run in the same batch
+   only if their `Touches` values don't overlap (no shared file/component). If a task's `Touches`
+   is unclear or ambiguous, treat it as not parallel-safe — run it alone.
+3. **Dispatch the batch:**
+   - **Batch of 1** → run directly in the main thread, exactly as before (no subagent overhead
+     for solo work).
+   - **Batch of 2+** → dispatch each task to a separate subagent via the Task tool, in the same
+     turn. Each subagent prompt must state explicitly: the task description, the exact file(s) in
+     `Touches`, and "follow `sf-[owner skill]`'s conventions exactly as if that skill were invoked
+     directly" — never duplicate that skill's rules into the prompt, just name it and let it
+     trigger in the subagent's own context.
+   - **Assign each subagent in a batch a random name from the pool below, unique within that
+     batch** — used only as a tracking label in the orchestrator's own narration and Execution Log
+     ("Dispatched to Sasha"), never written into code, commits, or file content.
+4. **Only the orchestrator (main thread) writes to the plan file.** Subagents report their result
+   back; they never edit `instructions/architecture/*.md` directly. Once every subagent in the
+   batch has reported back, the orchestrator updates each task's status serially — this is what
+   prevents concurrent writes to the same plan file.
+5. **Per task, on completion:** set status to `D` (Done) and append **one line** to the Execution
+   Log — no narrative, just what changed, where, and (if dispatched in a batch) which agent name
+   handled it.
+6. **Per task, if it can't proceed** (missing decision, blocked dependency, discovered conflict):
+   set status to `B` (Blocked), write a one-line reason, and surface it to the user — a Blocked
+   task in a batch does not stop the other tasks in that same batch from completing.
+7. **Recompute and repeat.** After a batch finishes, recompute the ready set (newly-unblocked
+   tasks may now qualify) and dispatch the next batch. Continue until every task is `D`, or every
+   remaining task is `B` — in which case stop and ask the user how to proceed via the choice
+   format.
+
+**Subagent name pool** (pick unique names within a batch; reuse across different batches is fine):
+Maya, Sasha, Nadia, Kirana, Alya, Cinta, Bunga, Dewi, Farah, Gita, Intan, Laras, Mira, Nita,
+Putri, Rani, Sari, Tantri, Vina, Wulan
 
 ### Phase 5 — Resume
 
@@ -201,8 +227,12 @@ direct reference to a plan file.
    feature name and last-updated date as the option label).
 4. Read only that plan file. The **Resume Briefing** section is sufficient to continue — if it
    isn't, that's a defect in how the plan was written, not a reason to re-derive context elsewhere.
-5. Find the first task that is not `D`, confirm with the user in one line ("Resuming at TASK-04:
-   [description], owner sf-testing — proceeding"), and continue Phase 4.
+5. Find every task that is not `D`. **Any task still marked `IP` from a previous session means
+   its batch was interrupted mid-flight** — don't assume it actually finished or actually failed;
+   treat it as `P` again and re-verify its `Touches` before re-dispatching (check whether the file
+   actually reflects the change described in the task, since the interruption could have happened
+   before or after the underlying work landed). Recompute the ready/parallel-safe batch from
+   there and continue Phase 4 normally.
 
 ---
 
@@ -271,24 +301,33 @@ Permission Set Group `[PSG Name]`
 
 ## Task Breakdown
 
-| ID      | Description                                                                 | Owner Skill | Depends On | Status |
-| ------- | --------------------------------------------------------------------------- | ----------- | ---------- | ------ |
-| TASK-01 | [what]                                                                      | sf-admin    | —          | D      |
-| TASK-02 | Grant access via `[PS/PSG name from Decision 3]` — extend/create as decided | sf-admin    | TASK-01    | P      |
-| TASK-03 | [what]                                                                      | sf-dev      | TASK-01    | IP     |
-| TASK-04 | [what]                                                                      | sf-testing  | TASK-03    | P      |
-| TASK-05 | [what]                                                                      | sf-devops   | TASK-04    | P      |
+| ID      | Description                                                                 | Owner Skill | Touches                     | Depends On       | Status |
+| ------- | --------------------------------------------------------------------------- | ----------- | --------------------------- | ---------------- | ------ |
+| TASK-01 | [what]                                                                      | sf-admin    | `Project__c` (object)       | —                | D      |
+| TASK-02 | Grant access via `[PS/PSG name from Decision 3]` — extend/create as decided | sf-admin    | `[PS/PSG name]`             | TASK-01          | P      |
+| TASK-03 | [what]                                                                      | sf-dev      | `ProjectController.cls`     | TASK-01          | P      |
+| TASK-04 | [what]                                                                      | sf-dev      | `projectCard` (LWC)         | TASK-01          | P      |
+| TASK-05 | [what]                                                                      | sf-testing  | `ProjectControllerTest.cls` | TASK-03          | P      |
+| TASK-06 | [what]                                                                      | sf-devops   | manifest + deploy           | TASK-04, TASK-05 | P      |
 
 **Status codes:** `P` Pending · `IP` In Progress · `B` Blocked · `D` Done
+
+**Touches** is what makes parallel dispatch safe: TASK-02, TASK-03, and TASK-04 all depend only on
+TASK-01 and touch different things — they're a valid parallel batch. TASK-05 depends on TASK-03
+and must wait for it. TASK-06 depends on both TASK-04 and TASK-05, so it waits for the slower of
+the two.
 
 ---
 
 ## Execution Log
 
-_One line per completed or blocked task. No narrative._
+_One line per completed or blocked task. No narrative. Include the agent name if the task was
+dispatched as part of a parallel batch — omit it for solo/main-thread tasks._
 
 - YYYY-MM-DD HH:MM — TASK-01 done — Created `Project__c` fields per Decision 1
-- YYYY-MM-DD HH:MM — TASK-02 blocked — needs Decision on callout timeout, asked user
+- YYYY-MM-DD HH:MM — TASK-02 done (agent: Nadia) — Extended `Project Manager Access` PS
+- YYYY-MM-DD HH:MM — TASK-03 done (agent: Sasha) — Added `getProjects()` to `ProjectController.cls`
+- YYYY-MM-DD HH:MM — TASK-04 blocked (agent: Kirana) — needs Decision on empty-state copy, asked user
 ```
 
 ---
@@ -339,6 +378,9 @@ best if users need to review before submitting (D) Other — describe your own a
 9. **Read `architecture.md` instead of re-scanning the whole project.** If the project baseline
    exists (from `/sf-init`), it already has the tech stack, data model, Permission Set inventory,
    and org aliases — reuse it. Only scan for what's specific to the current feature.
+10. **Don't parallelize trivial batches.** A batch of 2+ is only worth subagent overhead when the
+    tasks are substantial (real file edits, not one-liners). If a "parallel-safe" batch is tiny,
+    running it directly in the main thread is often cheaper than the dispatch overhead.
 
 ---
 
@@ -356,5 +398,12 @@ best if users need to review before submitting (D) Other — describe your own a
 - ✕ Skipping the Permission Set Strategy decision because the feature "seems simple" — access
   control is part of every feature that touches an object, field, Apex class, or LWC
 - ✕ Assuming a new Permission Set is needed without first scanning for an existing one that fits
+- ✕ Dispatching two tasks in parallel when their `Touches` overlap, or when either one's
+  `Touches` is too vague to be sure it doesn't
+- ✕ Letting a subagent write directly to the plan file — only the orchestrator writes status/log
+  updates, and only after the batch reports back
+- ✕ Reusing the same agent name for two subagents within the same batch
+- ✕ Treating an `IP` task found on resume as already finished — it means the batch was
+  interrupted, not that the work landed; re-verify before re-dispatching
 - ✕ Asking the user to type an org alias from memory when `sf org list` can just be run
 - ✕ Resolving org aliases for a plan that has no `sf-devops`/`sf-data-migration` task at all
