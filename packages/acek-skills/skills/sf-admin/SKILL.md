@@ -13,7 +13,8 @@ description: >
 # Salesforce Administrator Skill
 
 ## Environment Context
-- API Version: **61.0**
+
+- API Version: **67.0** (Summer '26)
 - Org Type: Enterprise (single org: sandbox + production)
 - Tooling: **SF CLI** for metadata retrieval; most admin tasks done declaratively in Setup UI
 - Any metadata changes intended for production must go through the DevOps deployment process
@@ -22,21 +23,22 @@ description: >
 
 ## Naming Conventions
 
-| Artifact | Convention | Example |
-|---|---|---|
-| Custom Object | PascalCase, singular | `Project__c`, `WorkOrder__c` |
-| Custom Field | PascalCase__c | `ProjectStatus__c`, `DueDate__c` |
-| Custom Tab | Match object label | — |
-| Permission Set | Descriptive, Title Case | `Project Manager Access` |
-| Flow | Action + Object, Title Case | `Create Project Record`, `Update Opportunity Stage` |
-| Validation Rule | OBJECT_DescriptionOfRule | `ACCOUNT_RequireIndustry` |
-| Report/Dashboard | Descriptive, audience-first | `Sales Team — Pipeline by Stage Q3` |
+| Artifact         | Convention                  | Example                                             |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| Custom Object    | PascalCase, singular        | `Project__c`, `WorkOrder__c`                        |
+| Custom Field     | PascalCase\_\_c             | `ProjectStatus__c`, `DueDate__c`                    |
+| Custom Tab       | Match object label          | —                                                   |
+| Permission Set   | Descriptive, Title Case     | `Project Manager Access`                            |
+| Flow             | Action + Object, Title Case | `Create Project Record`, `Update Opportunity Stage` |
+| Validation Rule  | OBJECT_DescriptionOfRule    | `ACCOUNT_RequireIndustry`                           |
+| Report/Dashboard | Descriptive, audience-first | `Sales Team — Pipeline by Stage Q3`                 |
 
 ---
 
 ## Custom Objects
 
 ### Checklist when creating a Custom Object
+
 - [ ] **Label**: singular (e.g. `Project`), plural auto-generated
 - [ ] **API Name**: PascalCase + `__c` (e.g. `Project__c`)
 - [ ] **Record Name field**: meaningful (not just "Project Name" — be specific)
@@ -49,36 +51,46 @@ description: >
 - [ ] Add to relevant **App** via App Manager after creation
 
 ### Relationships
-| Type | Use When |
-|---|---|
+
+| Type          | Use When                                                           |
+| ------------- | ------------------------------------------------------------------ |
 | Master-Detail | Child cannot exist without parent; sharing & rollup summary needed |
-| Lookup | Loose coupling; child can exist independently |
-| Many-to-Many | Use Junction Object with two Master-Detail fields |
-| Hierarchical | Self-referential (User only) |
+| Lookup        | Loose coupling; child can exist independently                      |
+| Many-to-Many  | Use Junction Object with two Master-Detail fields                  |
+| Hierarchical  | Self-referential (User only)                                       |
 
 ---
 
 ## Custom Fields
 
 ### Field Type Selection Guide
-| Data | Recommended Type |
-|---|---|
-| Short text (<255 chars) | Text |
-| Long text / notes | Long Text Area (set char limit intentionally) |
-| Controlled list of values | Picklist |
-| Currency amounts | Currency (respects org currency settings) |
-| Calculated value | Formula |
-| Running total from child | Roll-Up Summary (Master-Detail only) |
-| True/False | Checkbox |
-| Date only | Date |
-| Date + Time | Date/Time |
-| External system ID | Text, mark as External ID + Unique |
-| Reference to another record | Lookup or Master-Detail |
+
+| Data                        | Recommended Type                              |
+| --------------------------- | --------------------------------------------- |
+| Short text (<255 chars)     | Text                                          |
+| Long text / notes           | Long Text Area (set char limit intentionally) |
+| Controlled list of values   | Picklist                                      |
+| Currency amounts            | Currency (respects org currency settings)     |
+| Calculated value            | Formula                                       |
+| Running total from child    | Roll-Up Summary (Master-Detail only)          |
+| True/False                  | Checkbox                                      |
+| Date only                   | Date                                          |
+| Date + Time                 | Date/Time                                     |
+| External system ID          | Text, mark as External ID + Unique            |
+| Reference to another record | Lookup or Master-Detail                       |
 
 ### Field Creation Checklist
-- [ ] API Name: PascalCase__c — **no spaces, no special characters**
+
+- [ ] API Name: PascalCase\_\_c — **no spaces, no special characters**
 - [ ] Help Text: always fill — explain purpose and expected format
-- [ ] Field-Level Security (FLS): set explicitly per profile/permission set after creation
+- [ ] **Data classification**: for fields on person-related objects (Contact, Lead, Person
+      Account, custom objects tied to an identified individual), classify as Public / Internal /
+      Confidential / Restricted — see `sf-security-review`'s PII & Data Privacy section
+- [ ] Field-Level Security (FLS): set explicitly per profile/permission set after creation —
+      Confidential/Restricted fields get the narrowest access that still works
+- [ ] **Encryption**: for Restricted fields (NIK, health data, financial identifiers), evaluate
+      Shield Platform Encryption at creation time — encryption type can't always be changed later
+      without data loss
 - [ ] Add to **Page Layout** after creation
 - [ ] Add to relevant **List View** if needed
 - [ ] Consider **Required** at field level vs. at Validation Rule level (VR gives better error messages)
@@ -88,6 +100,7 @@ description: >
 ## Security Model
 
 ### Layers (top to bottom)
+
 1. **OWD** — baseline access for all users (most restrictive)
 2. **Role Hierarchy** — opens access up the hierarchy
 3. **Sharing Rules** — criteria-based or ownership-based exceptions to OWD
@@ -97,12 +110,29 @@ description: >
 7. **Permission Set Groups** — bundle multiple Permission Sets
 
 ### Best Practice
+
 - Keep Profiles minimal (baseline access only)
 - Use **Permission Sets** for feature/role-based access
 - Group Permission Sets into **Permission Set Groups** for easy assignment
 - Never grant "Modify All" or "View All" without documented business justification
 
+### ⚠️ Before creating a new Permission Set — scan first
+
+Whenever a new feature grants access to an object, field, Apex class, or LWC, **scan existing
+Permission Sets and Permission Set Groups first** — never default to creating a new one without
+checking. Ask the user (with the real names found, never invented) whether to:
+
+- Extend an existing Permission Set that already covers similar access, or
+- Create a new one scoped to this feature, or
+- Add it to an existing Permission Set Group
+
+This applies even to small, single-object changes handled directly by this skill without going
+through `sf-architect` — `sf-architect` covers this formally in its Decisions phase for larger
+features, but this skill shouldn't skip the check just because the change is simple.
+
 ### Permission Set Creation Checklist
+
+- [ ] Confirmed no existing Permission Set already fits (see scan step above)
 - [ ] Name: descriptive, audience-clear (`Project Manager Access`)
 - [ ] Object permissions: only what role needs (CRUD individually)
 - [ ] FLS: explicitly set for each relevant field
@@ -114,15 +144,17 @@ description: >
 ## Flows
 
 ### Flow Type Selection
-| Scenario | Flow Type |
-|---|---|
-| User-facing guided process | Screen Flow |
-| Trigger on record create/update/delete | Record-Triggered Flow |
-| Run on a schedule | Schedule-Triggered Flow |
-| Called from another flow or Apex | Autolaunched Flow (No Trigger) |
-| Triggered by platform event | Platform Event-Triggered Flow |
+
+| Scenario                               | Flow Type                      |
+| -------------------------------------- | ------------------------------ |
+| User-facing guided process             | Screen Flow                    |
+| Trigger on record create/update/delete | Record-Triggered Flow          |
+| Run on a schedule                      | Schedule-Triggered Flow        |
+| Called from another flow or Apex       | Autolaunched Flow (No Trigger) |
+| Triggered by platform event            | Platform Event-Triggered Flow  |
 
 ### Flow Best Practices
+
 - **Bulkification**: avoid SOQL/DML elements inside loops — use Collection variables + Loop
 - **Error handling**: add Fault paths on every DML element; log or notify on failure
 - **Governor limits**: one Flow can do max 150 DML + 100 SOQL per transaction
@@ -131,6 +163,7 @@ description: >
 - **Test before activating**: use Flow's built-in debug tool + write test coverage if invoked from Apex
 
 ### Record-Triggered Flow — Run Order Awareness
+
 - Fast Field Updates run before triggers
 - Actions and Related Records run after triggers (same transaction)
 - Async paths run in new transaction — cannot roll back
@@ -140,6 +173,7 @@ description: >
 ## Validation Rules
 
 ### Pattern
+
 ```
 /* Rule Name: OBJECT_DescriptionOfRule */
 /* Error Message: user-friendly, actionable */
@@ -162,14 +196,16 @@ AND(
 ## Reports & Dashboards
 
 ### Report Types to Know
-| Type | Use |
-|---|---|
-| Tabular | Simple lists, exports |
-| Summary | Grouped data with subtotals |
-| Matrix | Cross-tabulation (rows + columns grouping) |
-| Joined | Multiple report blocks in one |
+
+| Type    | Use                                        |
+| ------- | ------------------------------------------ |
+| Tabular | Simple lists, exports                      |
+| Summary | Grouped data with subtotals                |
+| Matrix  | Cross-tabulation (rows + columns grouping) |
+| Joined  | Multiple report blocks in one              |
 
 ### Dashboard Checklist
+
 - [ ] Meaningful title that says what decision it helps make
 - [ ] Running User set appropriately (dynamic dashboards for self-service)
 - [ ] Refresh schedule configured
@@ -181,13 +217,15 @@ AND(
 ## Data Management
 
 ### Import Options
-| Tool | Best For |
-|---|---|
-| Data Import Wizard | Standard objects, <50K records, no relationships |
-| Data Loader | Any object, large volumes, automation, relationships |
-| `sf data import tree` | Dev/test JSON datasets |
+
+| Tool                  | Best For                                             |
+| --------------------- | ---------------------------------------------------- |
+| Data Import Wizard    | Standard objects, <50K records, no relationships     |
+| Data Loader           | Any object, large volumes, automation, relationships |
+| `sf data import tree` | Dev/test JSON datasets                               |
 
 ### SOQL via CLI (for admin queries)
+
 ```bash
 # Query via SF CLI
 sf data query --query "SELECT Id, Name, CreatedDate FROM Account LIMIT 10" --target-org <alias>
@@ -213,18 +251,19 @@ sf project retrieve start \
 ```
 
 ### Common Metadata Type Names
-| Artifact | Metadata Type |
-|---|---|
-| Custom Object | `CustomObject` |
-| Custom Field | `CustomField` |
-| Permission Set | `PermissionSet` |
-| Profile | `Profile` |
-| Flow | `Flow` |
-| Validation Rule | `ValidationRule` |
-| Page Layout | `Layout` |
-| Compact Layout | `CompactLayout` |
-| Custom Tab | `CustomTab` |
-| App | `CustomApplication` |
+
+| Artifact        | Metadata Type       |
+| --------------- | ------------------- |
+| Custom Object   | `CustomObject`      |
+| Custom Field    | `CustomField`       |
+| Permission Set  | `PermissionSet`     |
+| Profile         | `Profile`           |
+| Flow            | `Flow`              |
+| Validation Rule | `ValidationRule`    |
+| Page Layout     | `Layout`            |
+| Compact Layout  | `CompactLayout`     |
+| Custom Tab      | `CustomTab`         |
+| App             | `CustomApplication` |
 
 ---
 

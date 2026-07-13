@@ -13,7 +13,8 @@ description: >
 # Salesforce DevOps Skill
 
 ## Environment Context
-- API Version: **61.0**
+
+- API Version: **67.0** (Summer '26)
 - Branching: `main → staging → develop → feature/*`
 - Production org alias: **`{{PROD_ORG_ALIAS}}`**
 - Sandbox/dev org alias: **`{{DEV_ORG_ALIAS}}`**
@@ -41,6 +42,11 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
 ## Code Review
 
 ### Apex Review Checklist
+
+- [ ] Test class exists for every new/modified Apex class (no class ships without one)
+- [ ] Every new/modified `.cls` and `.trigger` has a matching `-meta.xml` present and well-formed
+      (missing meta.xml usually means the file was hand-created instead of via `sf apex generate` —
+      see `sf-dev`'s File Creation rule)
 - [ ] No SOQL inside loops (governor limit violation)
 - [ ] No DML inside loops
 - [ ] Test coverage ≥ 85% (check with: `sf apex run test ...`)
@@ -52,14 +58,20 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
 - [ ] Helper methods throw `CalloutException` (not `AuraHandledException`)
 
 ### LWC Review Checklist
+
 - [ ] Component folder: camelCase (not PascalCase)
+- [ ] Every new component has a complete file set — `.html`, `.js`, `.css`, and `.js-meta.xml` —
+      an LWC missing its `js-meta.xml` will fail to deploy or stay invisible in the org
 - [ ] No `@wire` adapter inside a loop
 - [ ] All public `@api` properties have JSDoc
-- [ ] CSS includes `:host` brand token block (see Developer skill)
-- [ ] CSS uses `var(--brand)`, `var(--r-*)`, `var(--t)` — no hardcoded hex colors
-- [ ] Version badge present in HTML + CSS
+
+> **Out of scope for this checklist:** CSS/styling conventions and design system compliance.
+> That belongs to whichever skill built the component — `sf-dev` (standard SLDS 2 styling) or
+> `shaiden` (precision design system). DevOps review here is structural only: naming, wire
+> usage, and API documentation — not visual/design correctness.
 
 ### Git / General Checklist
+
 - [ ] No `Co-Authored-By` trailers in commit messages
 - [ ] No Salesforce Deploy IDs, Record IDs, API keys, or session tokens in commits
 - [ ] Commit message: lowercase type prefix + imperative sentence (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`)
@@ -67,14 +79,38 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
 
 ---
 
+## Dependency Completeness Checklist
+
+Before generating any manifest, confirm every dependent component is accounted for — a scoped
+deploy that's missing a dependency fails or silently breaks in the target org.
+
+- [ ] Every new/modified Apex class, trigger, and LWC has its `-meta.xml`/`.js-meta.xml` present
+      — a missing one means the component won't resolve correctly in the manifest at all
+- [ ] Every Apex class referenced by an LWC (`@wire`/imperative import) is included
+- [ ] Every child LWC referenced in a parent component's HTML is included
+- [ ] Every test class for each included Apex class is included
+- [ ] Every Custom Label referenced in Apex or LWC is included
+- [ ] Every Static Resource referenced is included
+- [ ] Every Custom Metadata Type / Custom Setting record type referenced is included
+- [ ] Every Flow called from Apex or referenced by a Flow-triggered automation is included
+- [ ] Every custom object/field newly referenced by the above is included
+- [ ] Every Permission Set / Permission Set Group needed to use the new components is included
+
+Trace dependencies by reading the actual imports/references in the code being deployed — never
+assume based on the feature name alone.
+
+---
+
 ## Manifest Generation
 
 ### Rule: Always use scoped manifests
+
 - **Never** deploy with `manifest/package.xml` (global) unless explicitly instructed
 - Create a new file: `manifest/package-deploy-<feature>.xml` for each deployment
 - Include only components relevant to the feature being deployed
 
 ### package.xml Template
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -122,34 +158,36 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
         <name>PermissionSet</name>
     </types>
 
-    <version>61.0</version>
+    <version>67.0</version>
 </Package>
 ```
 
 ### Common Metadata Type Names (quick reference)
-| Artifact | Metadata Type Name |
-|---|---|
-| Apex Class | `ApexClass` |
-| Apex Trigger | `ApexTrigger` |
-| LWC | `LightningComponentBundle` |
-| Aura Component | `AuraDefinitionBundle` |
-| Custom Object | `CustomObject` |
-| Custom Field | `CustomField` |
-| Permission Set | `PermissionSet` |
-| Profile | `Profile` |
-| Flow | `Flow` |
-| Validation Rule | `ValidationRule` |
-| Page Layout | `Layout` |
-| Custom Tab | `CustomTab` |
-| Custom App | `CustomApplication` |
-| Static Resource | `StaticResource` |
-| Named Credential | `NamedCredential` |
+
+| Artifact         | Metadata Type Name         |
+| ---------------- | -------------------------- |
+| Apex Class       | `ApexClass`                |
+| Apex Trigger     | `ApexTrigger`              |
+| LWC              | `LightningComponentBundle` |
+| Aura Component   | `AuraDefinitionBundle`     |
+| Custom Object    | `CustomObject`             |
+| Custom Field     | `CustomField`              |
+| Permission Set   | `PermissionSet`            |
+| Profile          | `Profile`                  |
+| Flow             | `Flow`                     |
+| Validation Rule  | `ValidationRule`           |
+| Page Layout      | `Layout`                   |
+| Custom Tab       | `CustomTab`                |
+| Custom App       | `CustomApplication`        |
+| Static Resource  | `StaticResource`           |
+| Named Credential | `NamedCredential`          |
 
 ---
 
 ## Deployment Commands
 
 ### Dry-Run (always first)
+
 ```bash
 sf project deploy start \
   --dry-run \
@@ -163,6 +201,7 @@ sf project deploy start \
 - If test failures: fix before actual deploy — never bypass
 
 ### Actual Deploy
+
 ```bash
 sf project deploy start \
   --manifest manifest/package-deploy-<feature>.xml \
@@ -175,20 +214,24 @@ sf project deploy start \
 - **Record the Deploy ID** from the output — required for CR and deploy doc
 
 ### Quick Deploy (72-hour window only)
+
 ```bash
 sf project deploy quick \
   --job-id <ValidationJobId> \
   --target-org {{PROD_ORG_ALIAS}}
 ```
+
 - Only valid within 72 hours of successful validation
 - Use the Job ID from the dry-run validation, not from a previous deploy
 
 ### Check Deployment Status
+
 ```bash
 sf project deploy report --job-id <DeployId> --target-org {{PROD_ORG_ALIAS}}
 ```
 
 ### Retrieve Metadata (before deploying admin changes)
+
 ```bash
 sf project retrieve start \
   --manifest manifest/package-deploy-<feature>.xml \
@@ -200,10 +243,12 @@ sf project retrieve start \
 ## Change Request (CR)
 
 ### When: Required before EVERY production deploy
+
 File: `instructions/change-request/YYYYMMDD-<feature>-cr.md`
 Language: **English**
 
 ### CR Template
+
 ```markdown
 # Change Request: [Feature Name]
 
@@ -215,16 +260,26 @@ Language: **English**
 ---
 
 ## Purpose
+
 [1 sentence: what this change does]
 
 ## Change Tasks
+
 - [Component name] — [what was changed and why]
 - [Component name] — [what was changed and why]
 
+## PII Impact
+
+[Does this change create, modify access to, or migrate PII-bearing fields/objects? If yes,
+reference the `sf-security-review` Data Privacy checklist completed for this change. If no, state
+"None — no PII-bearing fields or objects affected."]
+
 ## Impact
+
 [1 paragraph or bullet points: what changes for users and the system after this deploy]
 
 ## Rollback
+
 If the deployment causes issues, perform the following:
 
 1. [Step 1 — e.g. Deactivate the new Flow]
@@ -251,12 +306,14 @@ File: `instructions/deploy-doc/YYYYMMDD-<feature>-deploy.md`
 ---
 
 ## Pre-Deploy Checklist
+
 - [ ] Dry-run completed successfully
 - [ ] All specified tests passed (≥85% coverage)
 - [ ] CR created at `instructions/change-request/`
 - [ ] Code review approved on GitHub PR
 
 ## Deploy Steps
+
 1. Run dry-run → confirm success
 2. Create CR
 3. Run actual deploy
@@ -265,10 +322,12 @@ File: `instructions/deploy-doc/YYYYMMDD-<feature>-deploy.md`
 6. Push to GitHub + merge PR
 
 ## Post-Deploy Verification
+
 - [ ] [Specific thing to verify in production, e.g. "Open projectCard LWC on a Project record — confirm version badge displays"]
 - [ ] [Another verification step]
 
 ## Result
+
 **Deploy ID:** [filled after deploy]
 **Status:** Success / Partial / Failed
 **Notes:** [any issues encountered]
@@ -295,6 +354,7 @@ File: `instructions/deploy-doc/YYYYMMDD-<feature>-deploy.md`
 ## Git Workflow
 
 ### Commit Message Format
+
 ```
 <type>: <short imperative description>
 
@@ -302,6 +362,7 @@ Types: feat | fix | refactor | docs | chore
 ```
 
 Examples:
+
 ```
 feat: add project status field to Project__c
 fix: handle null owner in ProjectHelper getProjects
@@ -311,6 +372,7 @@ chore: update package-deploy manifest for summer release
 ```
 
 ### Rules
+
 - ❌ Never add `Co-Authored-By` trailers
 - ❌ Never commit Deploy IDs, Record IDs, API keys, session tokens
 - ❌ Never commit org credentials or Named Credential values
@@ -318,6 +380,7 @@ chore: update package-deploy manifest for summer release
 - ✅ Reference the feature/ticket in commit body if relevant (not subject line)
 
 ### Commands Reference
+
 ```bash
 # Stage and commit
 git add .
@@ -335,18 +398,21 @@ gh pr create --base develop --title "feat: project card component" --body "..."
 ## Static Analysis (pre-PR)
 
 ### PMD (Apex)
+
 ```bash
 # Run PMD — must pass before PR
 pmd check --dir force-app --ruleset rulesets/apex/ruleset.xml --format text
 ```
 
 Key rules enforced:
+
 - `AvoidSoqlInLoops`
 - `AvoidDmlStatementsInLoops`
 - `ApexUnitTestClassShouldHaveAsserts`
 - `NcssMethodCount` (method complexity)
 
 ### ESLint (LWC)
+
 ```bash
 # Run ESLint
 npx eslint force-app/main/default/lwc --ext .js
@@ -358,10 +424,10 @@ Both must pass cleanly before a PR can be merged.
 
 ## Quick Reference — Org Aliases
 
-| Environment | Alias |
-|---|---|
-| Production | `{{PROD_ORG_ALIAS}}` |
-| Sandbox | `{{DEV_ORG_ALIAS}}` |
+| Environment | Alias                |
+| ----------- | -------------------- |
+| Production  | `{{PROD_ORG_ALIAS}}` |
+| Sandbox     | `{{DEV_ORG_ALIAS}}`  |
 
 ```bash
 # List all configured orgs

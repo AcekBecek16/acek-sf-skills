@@ -9,6 +9,7 @@ const command = args[0];
 const target = args[1]; // optional: specific skill name, or "--all"
 
 const SKILLS_SRC = path.join(__dirname, '../skills');
+const COMMANDS_SRC = path.join(__dirname, '../commands');
 
 function printBanner() {
 	console.log(`\x1b[36m
@@ -26,12 +27,14 @@ const TARGETS = {
 	'claude-project': {
 		label: 'Claude Code — project (./.claude/skills)',
 		dir: (cwd) => path.join(cwd, '.claude/skills'),
+		commandsDir: (cwd) => path.join(cwd, '.claude/commands'),
 		format: 'claude',
 		selected: true,
 	},
 	'claude-global': {
 		label: 'Claude Code — global (~/.claude/skills)',
 		dir: () => path.join(os.homedir(), '.claude/skills'),
+		commandsDir: () => path.join(os.homedir(), '.claude/commands'),
 		format: 'claude',
 		selected: false,
 	},
@@ -93,6 +96,30 @@ function listSkills() {
 		.readdirSync(SKILLS_SRC, { withFileTypes: true })
 		.filter((e) => e.isDirectory())
 		.map((e) => e.name);
+}
+
+// Slash commands are a Claude-Code-specific concept (single .md file per
+// command under .claude/commands/) — unlike skills, they have no equivalent
+// in Cursor/Windsurf/Copilot, so they only ever install to 'claude' format
+// targets.
+function listCommands() {
+	if (!fs.existsSync(COMMANDS_SRC)) return [];
+	return fs
+		.readdirSync(COMMANDS_SRC, { withFileTypes: true })
+		.filter((e) => e.isFile() && e.name.endsWith('.md'))
+		.map((e) => e.name.replace(/\.md$/, ''));
+}
+
+function installCommandToTarget(commandName, targetKey, cwd, aliases = {}) {
+	const targetDef = TARGETS[targetKey];
+	if (targetDef.format !== 'claude' || !targetDef.commandsDir) return;
+	const destDir = targetDef.commandsDir(cwd);
+	fs.mkdirSync(destDir, { recursive: true });
+	const content = applyAliases(
+		fs.readFileSync(path.join(COMMANDS_SRC, `${commandName}.md`), 'utf8'),
+		aliases,
+	);
+	fs.writeFileSync(path.join(destDir, `${commandName}.md`), content);
 }
 
 // Pulls `name`/`description` out of the SKILL.md frontmatter (YAML folded
@@ -258,12 +285,14 @@ async function runInteractiveInstall() {
 				{
 					type: 'text',
 					name: 'prod',
-					message: 'Production org alias (e.g. Acme_Production) — leave blank to fill in later',
+					message:
+						'Production org alias (e.g. Acme_Production) — leave blank to fill in later',
 				},
 				{
 					type: 'text',
 					name: 'dev',
-					message: 'Sandbox / dev org alias (e.g. Acme_Dev) — leave blank to fill in later',
+					message:
+						'Sandbox / dev org alias (e.g. Acme_Dev) — leave blank to fill in later',
 				},
 			],
 			{ onCancel },
@@ -275,9 +304,27 @@ async function runInteractiveInstall() {
 		for (const skillName of skills) {
 			installSkillToTarget(skillName, targetKey, cwd, aliases);
 		}
-		console.log(`✅ ${skills.length} skill(s) installed to ${TARGETS[targetKey].label}`);
+		console.log(
+			`✅ ${skills.length} skill(s) installed to ${TARGETS[targetKey].label}`,
+		);
+
+		if (skills.includes('sf-architect') && TARGETS[targetKey].commandsDir) {
+			installCommandToTarget('sf-init', targetKey, cwd, aliases);
+			console.log(
+				`✅ /sf-init command installed to ${TARGETS[targetKey].label}`,
+			);
+		}
 	}
 	warnIfAliasesUnresolved(skills, aliases);
+	if (
+		skills.includes('sf-architect') &&
+		targets.some((t) => TARGETS[t].commandsDir)
+	) {
+		console.log(
+			'\n💡 Run /sf-init in your project to bootstrap architecture.md — sf-architect reads it\n' +
+				'   on every plan afterward instead of re-scanning the whole project each time.',
+		);
+	}
 	console.log('\n🎉 Done!');
 }
 
@@ -293,6 +340,21 @@ async function main() {
 			console.log(
 				`✅ All ${available.length} skill(s) installed to ${TARGETS['claude-project'].label}`,
 			);
+			if (available.includes('sf-architect')) {
+				installCommandToTarget(
+					'sf-init',
+					'claude-project',
+					process.cwd(),
+					aliases,
+				);
+				console.log(
+					`✅ /sf-init command installed to ${TARGETS['claude-project'].label}`,
+				);
+				console.log(
+					'\n💡 Run /sf-init in your project to bootstrap architecture.md — sf-architect reads it\n' +
+						'   on every plan afterward instead of re-scanning the whole project each time.',
+				);
+			}
 			warnIfAliasesUnresolved(available, aliases);
 		} else if (target) {
 			printBanner();
@@ -305,7 +367,24 @@ async function main() {
 			}
 			const aliases = aliasesFromEnv();
 			installSkillToTarget(target, 'claude-project', process.cwd(), aliases);
-			console.log(`✅ Installed skill: ${target} → ${TARGETS['claude-project'].label}`);
+			console.log(
+				`✅ Installed skill: ${target} → ${TARGETS['claude-project'].label}`,
+			);
+			if (target === 'sf-architect') {
+				installCommandToTarget(
+					'sf-init',
+					'claude-project',
+					process.cwd(),
+					aliases,
+				);
+				console.log(
+					`✅ /sf-init command installed to ${TARGETS['claude-project'].label}`,
+				);
+				console.log(
+					'\n💡 Run /sf-init in your project to bootstrap architecture.md — sf-architect reads it\n' +
+						'   on every plan afterward instead of re-scanning the whole project each time.',
+				);
+			}
 			warnIfAliasesUnresolved([target], aliases);
 		} else {
 			await runInteractiveInstall();
@@ -313,6 +392,11 @@ async function main() {
 	} else if (command === 'list') {
 		console.log('📦 Available skills:');
 		listSkills().forEach((s) => console.log(`  - ${s}`));
+		const commands = listCommands();
+		if (commands.length > 0) {
+			console.log('\n⚡ Available commands:');
+			commands.forEach((c) => console.log(`  - /${c}`));
+		}
 	} else {
 		console.log(`
 Usage:
@@ -320,7 +404,11 @@ Usage:
   acek-skills install --all        Install all skills to Claude Code (project), no prompts
   acek-skills install <name>       Install a single skill to Claude Code (project), no prompts
 
-  acek-skills list                 List available skills
+  acek-skills list                 List available skills and commands
+
+Installing sf-architect also installs its companion /sf-init slash command (Claude Code targets
+only — Cursor/Windsurf/Copilot have no slash-command equivalent). Run /sf-init once per project
+to bootstrap architecture.md; sf-architect reads it on every plan afterward.
 
 Some skills reference your Salesforce org aliases. For non-interactive installs,
 set these env vars to fill them in automatically:

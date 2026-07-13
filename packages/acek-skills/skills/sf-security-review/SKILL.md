@@ -4,15 +4,17 @@ description: >
   Use this skill for Salesforce security reviews, vulnerability analysis, and security pattern
   enforcement. Trigger when the user asks to "review security", "check for vulnerabilities",
   "security audit", "CRUD check", "FLS check", "sharing model", "with sharing", "SOQL injection",
-  "XSS in LWC", "hardcoded credentials", "permission check", or when preparing code for
-  production deployment and needing a security sign-off checklist. Also use when the user asks
-  about Salesforce Shield, encryption, audit trail, or data visibility concerns.
+  "XSS in LWC", "hardcoded credentials", "permission check", "PII", "data privacy", "sandbox
+  masking", "UU PDP", or when preparing code for production deployment and needing a security
+  sign-off checklist. Also use when the user asks about Salesforce Shield, encryption, audit
+  trail, data masking, or data visibility concerns.
 ---
 
 # Salesforce Security Review Skill
 
 ## Environment Context
-- API Version: **61.0**
+
+- API Version: **67.0** (Summer '26)
 - Apex LSP: **offline** — use `Schema.getGlobalDescribe()` pattern (not compile-time SObject reference)
 - All security decisions must be documented in the relevant CR before production deploy
 
@@ -29,6 +31,38 @@ description: >
 ```
 
 All five layers must be considered. Code-level checks (layer 5) cannot compensate for misconfigured org-level settings (layers 1–4).
+
+---
+
+## ⚠️ API 67.0+ Default Security Model (Summer '26)
+
+This is a platform behavior change, not just a version bump — review it before auditing any
+class targeting API 67.0+.
+
+**What changed:** Apex database operations (SOQL, SOSL, DML, `Database.*`) now run in **user
+mode by default**. Object permissions, field-level security, and sharing are enforced
+automatically unless the code explicitly opts into system mode via `AccessLevel.SYSTEM_MODE`.
+`WITH SECURITY_ENFORCED` is **removed** — flag it as dead syntax if found in code being reviewed.
+
+**What this means for a security review:**
+
+- Layer 2 and 3 (object/field-level) are now platform-enforced by default for classes on API
+  67.0+ — a missing manual CRUD/FLS check on such a class is a **lower-severity finding** than it
+  used to be, but still worth flagging for error-message quality (see below)
+- Layer 4 (record-level sharing) is **unaffected** — `with sharing` / `without sharing` still
+  matters exactly as before, at every API version
+- **Batch, Queueable, Schedulable, and Trigger context still default to system mode regardless of
+  API version** — this has not changed. Manual CRUD/FLS checks remain necessary there.
+- Any `Database.query()` / `Database.insert()` etc. call using `AccessLevel.SYSTEM_MODE` is an
+  **intentional bypass** — it must be reviewed like a `without sharing` class: is there a
+  documented business reason?
+- `Security.stripInaccessible()` (API 48.0+) is the platform-recommended way to enforce
+  field-level access on a record set — prefer it over manual per-field checks when reviewing new
+  code, since it needs no compile-time SObject reference and covers the whole field set in one call
+
+**Reviewing legacy code (API < 67.0):** the old system-mode-by-default behavior still applies —
+manual CRUD/FLS checks are not optional there. Confirm the class's API version before deciding
+whether a missing check is a real gap or now platform-covered.
 
 ---
 
@@ -84,9 +118,28 @@ if (!Schema.getGlobalDescribe().get('Account').getDescribe().isUpdateable()) {
     throw new AuraHandledException('Insufficient access.');
 }
 
-// ⚠️ Field-level via evDescribe.fields NOT available with offline LSP
-// Use object-level check only; document the limitation in code comment
+// ✅ PREFERRED — Security.stripInaccessible() for field-level enforcement (API 48.0+)
+// No compile-time SObject reference needed, covers the full field set in one call
+SObjectAccessDecision decision = Security.stripInaccessible(
+    AccessType.READABLE,
+    [SELECT Id, Name, SensitiveField__c FROM Account]
+);
+List<Account> safeRecords = decision.getRecords();
+
+// Also available for writes:
+SObjectAccessDecision writeDecision = Security.stripInaccessible(AccessType.UPDATABLE, recordsToUpdate);
+update writeDecision.getRecords();
 ```
+
+**Note:** manual per-field `fields.getMap()` loops are unnecessary — `Security.stripInaccessible()`
+does not require a compile-time SObject reference either, so it works fine with an offline LSP and
+should be the default pattern for field-level enforcement on any record set.
+
+Under API 67.0+, both object- and field-level checks are also enforced automatically in user
+mode — see [API 67.0+ Default Security Model](#-api-670-default-security-model-summer-26) above.
+These explicit checks are still worth keeping for custom error messaging and for any code that
+runs in system mode (Batch/Queueable/Schedulable/Trigger context, or explicit
+`AccessLevel.SYSTEM_MODE`).
 
 ### 4. Exception Wrapping
 
@@ -137,7 +190,7 @@ List<Account> results = Database.query(query);
 
 ```apex
 // ❌ NEVER — hardcoded ID, credential, or org-specific value
-String endpoint = 'https://api.myorg.salesforce.com/services/data/v61.0';
+String endpoint = 'https://api.myorg.salesforce.com/services/data/v67.0';
 Id recordTypeId = '012000000000XXXAAA';
 
 // ✅ Named Credentials for endpoints
@@ -163,10 +216,10 @@ My_Config__mdt config = [SELECT Endpoint_URL__c FROM My_Config__mdt LIMIT 1];
 
 ```html
 <!-- ✅ SAFE — lwc:text auto-escapes output -->
-<p lwc:text={userGeneratedContent}></p>
+<p lwc:text="{userGeneratedContent}"></p>
 
 <!-- ❌ DANGEROUS — renders raw HTML, XSS risk -->
-<div innerHTML={userGeneratedContent}></div>
+<div innerHTML="{userGeneratedContent}"></div>
 ```
 
 ```javascript
@@ -237,12 +290,99 @@ public with sharing class AccountTriggerHandler {
 
 ---
 
+## PII & Data Privacy
+
+Salesforce orgs are inherently full of personal data — `Contact`, `Lead`, `Person Account`, and
+most custom objects touching real people. Security review must cover data privacy, not just
+code-level vulnerabilities. **This section is technical guidance, not legal advice** — for
+formal compliance sign-off, involve legal counsel; treat the below as engineering practice
+aligned with common data-protection principles (including Indonesia's UU PDP / Law No. 27 of
+2022, in force since October 2024).
+
+### What counts as PII in a typical Salesforce org
+
+| Category                   | Examples                                                                               |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| Direct identifiers         | Full name, NIK/national ID, passport number, email, phone                              |
+| Location data              | Mailing/shipping address, geolocation fields                                           |
+| Financial                  | Bank account, credit card (should never be stored raw — use a PCI-compliant processor) |
+| Sensitive/special category | Religion, health data, biometric data — extra caution required                         |
+| Behavioral                 | Purchase history, activity timeline, case history tied to an identified person         |
+
+### Field Classification
+
+Every new field on a person-related object should be classified during creation (in `sf-admin`'s
+field checklist) as one of: **Public** / **Internal** / **Confidential** / **Restricted**. Fields
+classified Confidential or Restricted are candidates for:
+
+- Field-Level Security locked down to only the roles that need it (least privilege, not just
+  "everyone who happens to have object access")
+- **Shield Platform Encryption** for data-at-rest protection on Restricted fields (NIK, health
+  data, financial identifiers) — note this protects at-rest storage and is transparent to most
+  declarative features, but does **not** replace FLS: an authorized user with field access still
+  sees decrypted data. Encryption and access control are separate layers.
+- Exclusion from integrations/exports unless the destination has an equivalent protection level
+
+### Data Masking for Non-Production Environments
+
+**The most common real-world PII risk is not code — it's sandbox refreshes.** Pulling full
+production data (including real customer PII) into a Developer or Partial/Full sandbox for
+testing, without masking, means every developer, QA tester, and demo user now has raw access to
+real people's data in an environment with weaker controls than production.
+
+- Prefer **Salesforce Data Mask** (Shield feature) for automated masking on sandbox refresh —
+  scrambles/shuffles/nulls PII fields while preserving referential integrity and data shape for
+  testing
+- If Data Mask isn't licensed, mask manually post-refresh: scripted anonymization (see
+  `sf-data-migration`'s cleansing patterns) that replaces names/emails/phones with synthetic
+  values before the sandbox is opened up for general dev/QA use
+- **Never** use a full unmasked production copy as a long-lived, broadly-accessible dev sandbox
+- Scratch orgs and test data via `TestDataFactory` (see `sf-testing`) should never be seeded from
+  a production export — always synthetic data
+
+### Audit Trail & Monitoring
+
+- **Field History Tracking** — enable on Restricted/Confidential fields so access-adjacent
+  changes are logged (note: tracks field _value changes_, not _views_ — for view-level audit,
+  Shield Event Monitoring is required)
+- **Shield Event Monitoring** — if licensed, use for logging actual read access to sensitive
+  records/reports, especially for objects holding Restricted-classified fields
+- Document who has "View All Data" / "Modify All Data" — these bypass all record-level
+  protections and should be rare, named, and justified
+
+### Data Retention
+
+- Don't treat Salesforce as indefinite storage for PII that no longer serves a business purpose
+  — stale Lead/Contact records with no activity are a growing liability, not just clutter
+- If a retention policy exists (check with the org's data protection/compliance function), any
+  new automation (Flow/Batch) that creates person-related records should account for it —
+  flag this in `sf-architect`'s Decisions phase when a new data model touches personal data
+
+### Adding This to a Security Review
+
+When PII-bearing objects/fields are part of the change being reviewed, add to the sign-off:
+
+- Data classification confirmed for new/modified fields
+- FLS matches classification (Restricted → narrowest access)
+- If sandbox testing was involved, confirm masked data was used
+- If Shield Platform Encryption is warranted, confirm it's applied
+- No PII appears in debug logs, exception messages surfaced to users, or committed code/tests
+
+---
+
 ## Security Review Checklist
 
 ### Apex
+
 - [ ] All classes declare `with sharing` (or documented `without sharing` with reason)
-- [ ] CRUD check present on all DML operations in `@AuraEnabled` methods
+- [ ] CRUD check present on all DML operations in `@AuraEnabled` methods (still recommended for
+      error-message quality even where API 67.0+ enforces it by default)
 - [ ] CRUD check uses `Schema.getGlobalDescribe()` (not compile-time SObject reference)
+- [ ] Field-level checks use `Security.stripInaccessible()`, not manual per-field loops
+- [ ] No `WITH SECURITY_ENFORCED` in SOQL — removed in API 67.0, flag as dead syntax if found
+- [ ] Any explicit `AccessLevel.SYSTEM_MODE` usage has a documented business reason
+- [ ] Batch/Queueable/Schedulable/Trigger code has manual CRUD/FLS checks (still system-mode by
+      default regardless of API version)
 - [ ] No SOQL injection — bind variables used; `escapeSingleQuotes()` on dynamic SOQL
 - [ ] No hardcoded IDs, credentials, URLs, or org-specific values
 - [ ] Named Credentials used for all external callouts
@@ -253,6 +393,7 @@ public with sharing class AccountTriggerHandler {
 - [ ] No recursive trigger execution (use static flag or Trigger Handler pattern)
 
 ### LWC
+
 - [ ] `lwc:text` used for dynamic content (not `innerHTML`)
 - [ ] No sensitive data (API keys, IDs, credentials) in JS/HTML
 - [ ] Event data validated before use
@@ -260,6 +401,7 @@ public with sharing class AccountTriggerHandler {
 - [ ] No direct DOM manipulation with user-supplied data
 
 ### Org / Deployment
+
 - [ ] Profiles: minimal baseline permissions only
 - [ ] Permission Sets: additive, role-specific
 - [ ] OWD: most restrictive setting that satisfies business need
@@ -268,7 +410,16 @@ public with sharing class AccountTriggerHandler {
 - [ ] Named Credentials: configured in target org before deploy
 - [ ] Custom Metadata: values verified in production before activation
 
+### Data Privacy
+
+- [ ] New/modified fields on person-related objects classified (Public/Internal/Confidential/Restricted)
+- [ ] FLS on Confidential/Restricted fields limited to roles that need it
+- [ ] Shield Platform Encryption applied where warranted (NIK, health, financial identifiers)
+- [ ] If sandbox testing occurred, confirm masked/synthetic data was used — not raw production PII
+- [ ] No PII in debug logs, exception messages, or committed test data
+
 ### Git / Source
+
 - [ ] No Salesforce IDs in committed code
 - [ ] No credentials, API keys, or session tokens in any file
 - [ ] No org-specific URLs hardcoded
@@ -278,16 +429,16 @@ public with sharing class AccountTriggerHandler {
 
 ## Common Vulnerabilities — Quick Reference
 
-| Vulnerability | Where | Detection | Fix |
-|---|---|---|---|
-| SOQL Injection | Dynamic SOQL | String concat with user input | Bind variables / `escapeSingleQuotes()` |
-| Missing CRUD check | `@AuraEnabled` DML | No `isCreateable()` before insert | Add `Schema.getGlobalDescribe()` check |
-| XSS | LWC | `innerHTML` with user data | Use `lwc:text` or `textContent` |
-| Hardcoded credential | Apex / JS | `apiKey = '...'` literal | Named Credential / Custom Metadata |
-| `without sharing` abuse | Service class | No business justification | Change to `with sharing`; document if needed |
-| Recursive trigger | Trigger | No recursion guard | Static Boolean flag in handler |
-| Exposed Record IDs | LWC URL params | `recordId` passed in URL | Validate on server side, check access |
-| Insecure callout | HTTP callout | Endpoint hardcoded, no Named Cred | Use Named Credentials |
+| Vulnerability           | Where              | Detection                         | Fix                                          |
+| ----------------------- | ------------------ | --------------------------------- | -------------------------------------------- |
+| SOQL Injection          | Dynamic SOQL       | String concat with user input     | Bind variables / `escapeSingleQuotes()`      |
+| Missing CRUD check      | `@AuraEnabled` DML | No `isCreateable()` before insert | Add `Schema.getGlobalDescribe()` check       |
+| XSS                     | LWC                | `innerHTML` with user data        | Use `lwc:text` or `textContent`              |
+| Hardcoded credential    | Apex / JS          | `apiKey = '...'` literal          | Named Credential / Custom Metadata           |
+| `without sharing` abuse | Service class      | No business justification         | Change to `with sharing`; document if needed |
+| Recursive trigger       | Trigger            | No recursion guard                | Static Boolean flag in handler               |
+| Exposed Record IDs      | LWC URL params     | `recordId` passed in URL          | Validate on server side, check access        |
+| Insecure callout        | HTTP callout       | Endpoint hardcoded, no Named Cred | Use Named Credentials                        |
 
 ---
 
@@ -302,19 +453,30 @@ Before every production deploy, add to CR:
 **Date:** YYYY-MM-DD
 
 ### Apex
+
 - Sharing model: [with sharing on all classes ✓ / exceptions documented below]
 - CRUD checks: [present on all DML ✓]
+- API version: [confirm 67.0+ user-mode-by-default applies, or note if legacy version reviewed]
 - SOQL injection risk: [none — bind variables used ✓]
 - Hardcoded values: [none ✓]
 
 ### LWC
+
 - XSS risk: [none — lwc:text used ✓]
 - Sensitive data in JS: [none ✓]
 
+### Data Privacy
+
+- PII fields classified: [confirmed ✓ / N/A — no PII involved]
+- Sandbox data masking: [confirmed masked ✓ / N/A — no sandbox testing involved]
+- Shield encryption applied where warranted: [confirmed ✓ / N/A]
+
 ### Exceptions & Justifications
+
 - [ClassName] uses `without sharing` because: [reason]
 
 ### Sign-Off
+
 - [ ] All checklist items passed
 - [ ] Exceptions documented and accepted
 ```

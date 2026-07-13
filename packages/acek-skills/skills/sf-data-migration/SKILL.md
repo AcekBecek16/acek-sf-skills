@@ -13,7 +13,8 @@ description: >
 # Salesforce Data Migration Skill
 
 ## Environment Context
-- API Version: **61.0**
+
+- API Version: **67.0** (Summer '26)
 - Tooling: **SF CLI** (`sf data` commands) for dev/test volumes; Data Loader for production volumes
 - Always migrate to **sandbox first**, verify, then production
 - Single org: sandbox → production
@@ -23,6 +24,7 @@ description: >
 ## Migration Planning — Before Touching Any Data
 
 ### Step 1: Discovery Checklist
+
 - [ ] What objects and how many records? (run COUNT queries first)
 - [ ] Are there required fields that source data may not have?
 - [ ] Are there lookup/relationship fields? (parent records must exist first)
@@ -33,7 +35,9 @@ description: >
 - [ ] What is the target volume? (under 10K → SF CLI; over 10K → Data Loader / Bulk API)
 
 ### Step 2: Dependency Order
+
 Always load in parent → child order:
+
 ```
 1. Custom Metadata / Reference Data (e.g. picklist-driving records)
 2. Accounts
@@ -45,6 +49,7 @@ Always load in parent → child order:
 ```
 
 ### Step 3: External ID Strategy
+
 Every migrated object should have an External ID field to enable upsert and relationship mapping.
 
 ```apex
@@ -55,6 +60,7 @@ SapId__c, OracleId__c // system-specific
 ```
 
 Field settings:
+
 - Type: Text (or Number if IDs are numeric)
 - Mark as: **External ID** ✓ and **Unique** ✓
 - Max length: match source system ID length
@@ -64,6 +70,7 @@ Field settings:
 ## SF CLI Data Commands — Dev/Test Volumes (<50K records)
 
 ### Query & Export
+
 ```bash
 # Basic query to CSV
 sf data query \
@@ -90,6 +97,7 @@ sf data export bulk \
 ```
 
 ### Import / Upsert
+
 ```bash
 # Insert new records
 sf data import bulk \
@@ -112,6 +120,7 @@ sf data delete bulk \
 ```
 
 ### Check Job Status
+
 ```bash
 sf data bulk results \
   --job-id <JobId> \
@@ -125,6 +134,7 @@ sf data bulk results \
 Data Loader uses Bulk API 2.0 by default. Use for production migration.
 
 ### CSV Requirements
+
 - UTF-8 encoding (no BOM)
 - First row: field API names (e.g. `Name,ExternalId__c,Industry__c`)
 - `null` to clear a field: leave cell empty OR use `#N/A` for some fields
@@ -133,26 +143,28 @@ Data Loader uses Bulk API 2.0 by default. Use for production migration.
 - Currency: numeric only, no currency symbols
 
 ### Batch Size Recommendations
-| Volume | Batch Size | Concurrency |
-|---|---|---|
-| < 10K | 200 | Serial |
-| 10K – 100K | 2,000 | Parallel |
-| 100K – 1M | 10,000 | Parallel |
-| > 1M | 10,000 | Parallel + schedule overnight |
+
+| Volume     | Batch Size | Concurrency                   |
+| ---------- | ---------- | ----------------------------- |
+| < 10K      | 200        | Serial                        |
+| 10K – 100K | 2,000      | Parallel                      |
+| 100K – 1M  | 10,000     | Parallel                      |
+| > 1M       | 10,000     | Parallel + schedule overnight |
 
 ### Error Handling
+
 - Always save the **success file** and **error file** per run
 - Error file contains failed rows + error message — fix and re-run only errors
 - Common errors and fixes:
 
-| Error | Cause | Fix |
-|---|---|---|
-| `REQUIRED_FIELD_MISSING` | Required field empty in CSV | Fill required fields; check validation rules |
-| `INVALID_FIELD` | Field API name wrong | Check with `sf sobject describe --sobject <Object>` |
-| `FIELD_INTEGRITY_EXCEPTION` | Lookup ID doesn't exist in org | Load parent records first |
-| `DUPLICATE_VALUE` | Unique field already exists | Switch from insert to upsert with External ID |
-| `STRING_TOO_LONG` | Value exceeds field length | Truncate or increase field length |
-| `CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY` | Trigger/validation blocking | Check trigger logic; may need to deactivate VR temporarily |
+| Error                                  | Cause                          | Fix                                                        |
+| -------------------------------------- | ------------------------------ | ---------------------------------------------------------- |
+| `REQUIRED_FIELD_MISSING`               | Required field empty in CSV    | Fill required fields; check validation rules               |
+| `INVALID_FIELD`                        | Field API name wrong           | Check with `sf sobject describe --sobject <Object>`        |
+| `FIELD_INTEGRITY_EXCEPTION`            | Lookup ID doesn't exist in org | Load parent records first                                  |
+| `DUPLICATE_VALUE`                      | Unique field already exists    | Switch from insert to upsert with External ID              |
+| `STRING_TOO_LONG`                      | Value exceeds field length     | Truncate or increase field length                          |
+| `CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY` | Trigger/validation blocking    | Check trigger logic; may need to deactivate VR temporarily |
 
 ---
 
@@ -161,6 +173,7 @@ Data Loader uses Bulk API 2.0 by default. Use for production migration.
 When loading child records and parent exists via External ID (not Salesforce ID):
 
 ### CSV Format
+
 Instead of using Salesforce `AccountId`, reference the parent's External ID:
 
 ```csv
@@ -172,6 +185,7 @@ Jane Smith,jane@example.com,ACC-67890
 Salesforce resolves `Account.ExternalId__c` to the Account's Salesforce ID automatically during upsert.
 
 ### Upsert Command
+
 ```bash
 sf data upsert bulk \
   --sobject Contact \
@@ -221,7 +235,36 @@ df.to_csv('cleaned_export.csv', index=False, encoding='utf-8')
 print(f"Cleaned: {len(df)} records")
 ```
 
+### Masking PII for Non-Production Loads
+
+When the target is a sandbox/dev org rather than production, mask identifying fields before
+loading — never load a raw production-PII export into a shared sandbox:
+
+```python
+import hashlib
+
+def mask_email(email, seed):
+    h = hashlib.sha256((email + seed).encode()).hexdigest()[:8]
+    return f"user_{h}@example-masked.com"
+
+def mask_phone(phone, seed):
+    h = hashlib.sha256((str(phone) + seed).encode()).hexdigest()[:8]
+    return f"0800{int(h, 16) % 10000000:07d}"
+
+SEED = "sandbox-rehearsal-2026"  # constant per run so relationships stay consistent
+
+df['email'] = df['email'].apply(lambda e: mask_email(e, SEED) if pd.notna(e) else e)
+df['phone'] = df['phone'].apply(lambda p: mask_phone(p, SEED) if pd.notna(p) else p)
+df['name'] = 'Test User ' + df.index.astype(str)  # or use a Faker library for realistic-looking names
+
+df.to_csv('masked_for_sandbox.csv', index=False, encoding='utf-8')
+```
+
+Hashing with a fixed seed keeps the same source record mapping to the same masked value across
+re-runs, which preserves referential testing behavior without exposing the real value.
+
 ### SOQL-Based Deduplication Check
+
 ```bash
 # Find duplicates in Salesforce by External ID
 sf data query \
@@ -294,10 +337,32 @@ public class AccountMigrationBatch implements Database.Batchable<SObject>, Datab
 ```
 
 ### Execute Batch
+
 ```apex
 // In Anonymous Apex
 Database.executeBatch(new AccountMigrationBatch(), 200); // 200 records per batch
 ```
+
+---
+
+## PII Handling During Migration
+
+The most common real-world privacy risk in data migration isn't the migration itself — it's
+**where the data ends up afterward.** Apply this alongside `sf-security-review`'s PII & Data
+Privacy section.
+
+- **Never load unmasked production PII into a sandbox** for testing/QA purposes without a
+  documented reason and masking plan. A migration rehearsal in sandbox should use masked or
+  synthetic data, not a raw production export.
+- If the migration source itself is an external system with real customer PII (names, emails,
+  phone numbers, national ID), treat the exported CSV/file as sensitive from the moment it's
+  created — don't leave it in a shared drive, temp folder, or commit it to version control.
+- For sandbox rehearsal specifically: run the same load against **masked** data first (see the
+  Data Cleansing script pattern below — extend it with name/email/phone scrambling for
+  non-production runs), confirm the load logic works, then run the real load against production
+  only.
+- Delete local export/import files after the migration is verified — don't leave PII-bearing CSVs
+  sitting in `exports/`/`imports/` folders longer than the migration window requires.
 
 ---
 
@@ -316,25 +381,31 @@ File: `instructions/migration/YYYYMMDD-<migration-name>-runbook.md`
 ---
 
 ## Pre-Migration Checklist
+
 - [ ] Backup current data (export all affected objects)
 - [ ] Verify External ID field exists on all target objects
 - [ ] Test migration in sandbox with 10% sample — confirm success rate > 99%
+- [ ] **If target is non-production: confirm PII fields are masked/synthetic, not raw production data**
 - [ ] Identify Validation Rules to deactivate temporarily (list below)
 - [ ] Identify Triggers/Flows that will fire — confirm acceptable behavior
 - [ ] Communicate downtime window to affected users (if any)
 - [ ] Confirm Data Loader / SF CLI version is current
 
 ## Validation Rules to Deactivate During Migration
-| Object | Validation Rule | Reason to Deactivate |
-|---|---|---|
+
+| Object  | Validation Rule         | Reason to Deactivate              |
+| ------- | ----------------------- | --------------------------------- |
 | Account | ACCOUNT_RequireIndustry | Source data may not have Industry |
 
 ## Load Order
+
 1. [Object 1] — [file name] — [estimated records]
 2. [Object 2] — [file name] — [estimated records]
 
 ## Rollback Plan
+
 If error rate > 5% or critical data issue found:
+
 1. Stop migration immediately
 2. Export all records inserted this session (filter by CreatedDate = TODAY)
 3. Delete inserted records using error-free export CSV + sf data delete bulk
@@ -342,6 +413,7 @@ If error rate > 5% or critical data issue found:
 5. Investigate root cause before re-attempting
 
 ## Post-Migration Verification
+
 - [ ] Record counts match source system
 - [ ] Sample 10 records manually — verify all fields correct
 - [ ] Lookup relationships intact (spot-check Contacts → Accounts)
@@ -349,10 +421,11 @@ If error rate > 5% or critical data issue found:
 - [ ] Users notified migration complete
 
 ## Results
-| Object | Inserted | Updated | Failed | Notes |
-|---|---|---|---|---|
-| Account | | | | |
-| Contact | | | | |
+
+| Object  | Inserted | Updated | Failed | Notes |
+| ------- | -------- | ------- | ------ | ----- |
+| Account |          |         |        |       |
+| Contact |          |         |        |       |
 ```
 
 ---

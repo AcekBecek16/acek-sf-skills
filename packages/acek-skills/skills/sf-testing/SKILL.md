@@ -13,8 +13,11 @@ description: >
 # Salesforce Testing Skill
 
 ## Environment Context
+
 - Minimum coverage: **85%** (aim for 90%+)
-- API Version: **61.0**
+- API Version: **67.0** (Summer '26)
+- Assertions: prefer the **`Assert` class** (`Assert.areEqual`, `Assert.isTrue`, etc. — API 56.0+)
+  over legacy `System.assertEquals`/`System.assert` in new tests
 - `AuraHandledException.getMessage()` in test context **always** returns `'Script-thrown exception'` — this is Salesforce by design, not a bug
 
 ---
@@ -42,8 +45,8 @@ private class AccountHelperTest {
         List<Account> result = AccountHelper.getAccounts(accounts[0].Id);
         Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Result should not be null');
-        System.assertNotEquals(0, result.size(), 'Result should contain records');
+        Assert.isNotNull(result, 'Result should not be null');
+        Assert.areNotEqual(0, result.size(), 'Result should contain records');
     }
 
     // ─── Edge Case ─────────────────────────────────────────────────────────────
@@ -53,8 +56,8 @@ private class AccountHelperTest {
         List<Account> result = AccountHelper.getAccounts(null);
         Test.stopTest();
 
-        System.assertNotEquals(null, result, 'Should return empty list, not null');
-        System.assertEquals(0, result.size(), 'Should return empty list for null Id');
+        Assert.isNotNull(result, 'Should return empty list, not null');
+        Assert.areEqual(0, result.size(), 'Should return empty list for null Id');
     }
 
     // ─── Exception / Permission Path ───────────────────────────────────────────
@@ -64,10 +67,10 @@ private class AccountHelperTest {
         // System.runAs(TestDataFactory.createRestrictedUser()) { ... }
         try {
             AccountHelper.restrictedMethod(null);
-            System.assert(false, 'Expected AuraHandledException was not thrown');
+            Assert.fail('Expected AuraHandledException was not thrown');
         } catch (AuraHandledException e) {
             // Salesforce by design: getMessage() always returns this in test context
-            System.assertEquals('Script-thrown exception', e.getMessage());
+            Assert.areEqual('Script-thrown exception', e.getMessage(), 'AuraHandledException message is masked in test context by design');
         }
     }
 
@@ -82,15 +85,20 @@ private class AccountHelperTest {
         );
         Test.stopTest();
 
-        System.assertEquals(200, result.size(), 'Should process all 200 records');
+        Assert.areEqual(200, result.size(), 'Should process all 200 records');
     }
 }
 ```
 
 ### Rules
+
 - **Always** use `Test.startTest()` / `Test.stopTest()` — resets governor limits and forces async execution
 - **Never** use `seeAllData = true` — always create test data explicitly
-- **Always** assert something — no test without `System.assert*`
+- **Always** assert something — no test without an `Assert` call
+- **Prefer the `Assert` class** (`Assert.areEqual`, `Assert.isTrue`, `Assert.isNotNull`, `Assert.fail`,
+  etc. — API 56.0+) over legacy `System.assertEquals`/`System.assert`. Same contract, clearer
+  failure messages, and it's the platform-recommended class going forward. Only reach for the
+  legacy `System.assert*` methods if targeting an API version below 56.0.
 - **3 minimum scenarios** per class: happy path, edge case, exception/permission
 - `@TestSetup` for shared data across methods; method-level setup only when data differs per test
 
@@ -164,9 +172,13 @@ public class TestDataFactory {
 ```
 
 ### Factory Rules
+
 - `doInsert` parameter on every method — caller decides whether to insert
 - Unique field values: use loop index + timestamp/Id to avoid duplicate errors
 - **Never** hardcode record IDs
+- **Never seed test data from a production export** — `TestDataFactory` values must always be
+  synthetic (`'Test Account ' + i`, `'test' + i + '@test.com'`), never real customer PII copied
+  from production for convenience
 - Add org-specific objects in the `Custom Objects` section
 - Username must be globally unique — always append `Datetime.now().getTime()`
 
@@ -175,6 +187,7 @@ public class TestDataFactory {
 ## Mocking HTTP Callouts
 
 ### Step 1 — Create Mock Implementation
+
 ```apex
 @isTest
 global class MyCalloutMock implements HttpCalloutMock {
@@ -200,6 +213,7 @@ global class MyCalloutMockError implements HttpCalloutMock {
 ```
 
 ### Step 2 — Use in Test
+
 ```apex
 @isTest
 static void testCallout_success() {
@@ -209,7 +223,7 @@ static void testCallout_success() {
     String result = MyService.callExternalSystem('payload');
     Test.stopTest();
 
-    System.assertEquals('12345', result, 'Should return ID from mock response');
+    Assert.areEqual('12345', result, 'Should return ID from mock response');
 }
 
 @isTest
@@ -219,15 +233,16 @@ static void testCallout_serverError_throwsException() {
     Test.startTest();
     try {
         MyService.callExternalSystem('payload');
-        System.assert(false, 'Expected exception not thrown');
+        Assert.fail('Expected exception not thrown');
     } catch (CalloutException e) {
-        System.assert(e.getMessage().contains('500'), 'Should surface HTTP 500 error');
+        Assert.isTrue(e.getMessage().contains('500'), 'Should surface HTTP 500 error');
     }
     Test.stopTest();
 }
 ```
 
 ### Rules
+
 - `Test.setMock()` must be called **before** `Test.startTest()`
 - Always test both success and failure mock paths
 - For multiple endpoints, use `StaticResourceCalloutMock` or a routing mock that checks `req.getEndpoint()`
@@ -247,7 +262,7 @@ static void testPlatformEventPublish() {
 
     // Assert downstream effect (e.g. record created by subscriber trigger)
     List<MyLog__c> logs = [SELECT Id FROM MyLog__c];
-    System.assertEquals(1, logs.size(), 'Event subscriber should have created a log');
+    Assert.areEqual(1, logs.size(), 'Event subscriber should have created a log');
 }
 ```
 
@@ -265,9 +280,9 @@ static void testRestrictedUser_cannotDelete() {
         Test.startTest();
         try {
             delete acc;
-            System.assert(false, 'Standard user should not be able to delete Account');
+            Assert.fail('Standard user should not be able to delete Account');
         } catch (DmlException e) {
-            System.assert(
+            Assert.isTrue(
                 e.getMessage().contains('insufficient access'),
                 'Should throw insufficient access error'
             );
@@ -282,19 +297,24 @@ static void testRestrictedUser_cannotDelete() {
 ## Assertion Best Practices
 
 ```apex
-// ✅ Always include a descriptive message (3rd param)
-System.assertEquals(expected, actual, 'Descriptive message of what was expected');
-System.assertNotEquals(null, result, 'Result should not be null');
-System.assert(result.size() > 0, 'List should not be empty after processing');
+// ✅ Prefer the Assert class (API 56.0+) — clearer failure messages, platform-recommended
+Assert.areEqual(expected, actual, 'Descriptive message of what was expected');
+Assert.isNotNull(result, 'Result should not be null');
+Assert.isTrue(result.size() > 0, 'List should not be empty after processing');
+
+// ✅ Always include a descriptive message (last param)
+Assert.areEqual('Active', result[0].Status__c, 'Status should be Active after processing');
 
 // ✅ For AuraHandledException — always expect 'Script-thrown exception'
-System.assertEquals('Script-thrown exception', e.getMessage());
+Assert.areEqual('Script-thrown exception', e.getMessage(), 'AuraHandledException message is masked in test context by design');
 
-// ✅ Assert specific fields, not just count
-System.assertEquals('Active', result[0].Status__c, 'Status should be Active after processing');
+// ⚠️ Legacy System.assert* still works and is acceptable in existing code — only required for
+// API versions below 56.0. Prefer Assert class in new tests; no need to mass-migrate old ones
+// just for this.
+System.assertEquals(expected, actual, 'Still valid, just superseded going forward');
 
-// ❌ Never assert without message
-System.assertEquals(5, result.size()); // Bad — no context when it fails
+// ❌ Never assert without a message
+Assert.areEqual(5, result.size()); // Bad — no context when it fails
 
 // ❌ Never test with catch-all that swallows the error
 try {
@@ -309,13 +329,15 @@ try {
 ## Coverage Strategy
 
 ### Minimum per component
-| Component | Required | Target |
-|---|---|---|
-| Apex Class (`@AuraEnabled`) | 85% | 90%+ |
-| Apex Trigger | 85% | 95%+ |
-| Batch / Schedulable / Queueable | 85% | 90%+ |
+
+| Component                       | Required | Target |
+| ------------------------------- | -------- | ------ |
+| Apex Class (`@AuraEnabled`)     | 85%      | 90%+   |
+| Apex Trigger                    | 85%      | 95%+   |
+| Batch / Schedulable / Queueable | 85%      | 90%+   |
 
 ### Run tests via SF CLI
+
 ```bash
 # Run specific test class
 sf apex run test \
@@ -341,6 +363,7 @@ sf apex run test \
 ```
 
 ### When coverage is below 85%
+
 1. Identify uncovered lines: run test with `--code-coverage` and review output
 2. Check: are there `if/else` branches not tested?
 3. Check: are there exception paths not triggered?
@@ -351,11 +374,11 @@ sf apex run test \
 
 ## Common Test Failures & Fixes
 
-| Error | Cause | Fix |
-|---|---|---|
-| `MIXED_DML_OPERATION` | Inserting Setup object (User) and non-Setup object in same context | Wrap User insert in `System.runAs(new User())` |
-| `UNABLE_TO_LOCK_ROW` | Parallel tests updating same record | Use `@TestSetup` + unique records per test |
-| `Too many SOQL queries: 101` | SOQL in loop not caught by test | Add bulk test (200 records), fix the source |
-| `Script-thrown exception` in `getMessage()` | `AuraHandledException` — expected behavior | Assert this exact string — it's correct |
-| Test passes locally, fails in org | `seeAllData=true` dependency or hardcoded IDs | Remove `seeAllData`, use `TestDataFactory` |
-| `Callout not allowed` | HTTP callout without `Test.setMock()` | Add mock before `Test.startTest()` |
+| Error                                       | Cause                                                              | Fix                                            |
+| ------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| `MIXED_DML_OPERATION`                       | Inserting Setup object (User) and non-Setup object in same context | Wrap User insert in `System.runAs(new User())` |
+| `UNABLE_TO_LOCK_ROW`                        | Parallel tests updating same record                                | Use `@TestSetup` + unique records per test     |
+| `Too many SOQL queries: 101`                | SOQL in loop not caught by test                                    | Add bulk test (200 records), fix the source    |
+| `Script-thrown exception` in `getMessage()` | `AuraHandledException` — expected behavior                         | Assert this exact string — it's correct        |
+| Test passes locally, fails in org           | `seeAllData=true` dependency or hardcoded IDs                      | Remove `seeAllData`, use `TestDataFactory`     |
+| `Callout not allowed`                       | HTTP callout without `Test.setMock()`                              | Add mock before `Test.startTest()`             |
