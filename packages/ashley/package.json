@@ -1,0 +1,45 @@
+{
+	"name": "@nullbotdotexe/ashley",
+	"version": "0.2.0",
+	"description": "Ashley + Eva — installable Claude Code skills taking a Next.js + Supabase SaaS idea from raw concept (eva) through a gated technical plan (ashley), dispatched to four role agents (commatoze, isla, asa, channel)",
+	"bin": {
+		"ashley": "bin/cli.js"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"bin/",
+		"skills/",
+		"agents/",
+		"commands/"
+	],
+	"keywords": [
+		"claude",
+		"claude-code",
+		"skills",
+		"subagents",
+		"nextjs",
+		"supabase",
+		"saas",
+		"orchestrator",
+		"product-management",
+		"ideation"
+	],
+	"engines": {
+		"node": ">=14"
+	},
+	"dependencies": {
+		"prompts": "^2.4.2"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/AcekBecek16/acek-sf-skills.git",
+		"directory": "packages/ashley"
+	},
+	"homepage": "https://github.com/AcekBecek16/acek-sf-skills/tree/master/packages/ashley#readme",
+	"bugs": {
+		"url": "https://github.com/AcekBecek16/acek-sf-skills/issues"
+	}
+}
