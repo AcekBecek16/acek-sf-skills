@@ -141,12 +141,19 @@ Nothing is built yet. This phase only produces decisions with rationale.
    **Touches** list (exact file(s)/component(s) it will create or modify), a dependency list, and
    status `P` (Pending). `Touches` is what Phase 4 uses to decide which tasks are safe to run in
    parallel — be specific and accurate here, not vague.
-3. **If any task's Owner Skill is `sf-devops` or `sf-data-migration`, resolve org aliases before
+3. **Always add a `sf-security-review` task** when the plan creates or modifies access to any
+   PII-bearing object/field (see `sf-security-review`'s PII & Data Privacy categories), introduces
+   a new integration/callout, or changes the sharing model — never skip it because the feature
+   "seems simple," the same standard already applied to Permission Set Strategy above. Depend it
+   on the relevant `sf-admin`/`sf-dev` tasks and put it before the `sf-devops` deploy task — its
+   sign-off is what fills the CR's "PII Impact" section. Skip only when Project Context confirms
+   none of those three surfaces are touched.
+4. **If any task's Owner Skill is `sf-devops` or `sf-data-migration`, resolve org aliases before
    finalizing** — see [Org Alias Resolution](#org-alias-resolution) below. Skip this step
    entirely if no task touches those two skills; don't ask about aliases a plan doesn't need.
-4. Present the plan summary to the user and ask for explicit approval — options: **Approve**,
+5. Present the plan summary to the user and ask for explicit approval — options: **Approve**,
    **Revise a section**, **Cancel**. Do not proceed on silence or an ambiguous reply.
-5. Only after explicit approval: write the plan file to
+6. Only after explicit approval: write the plan file to
    `instructions/architecture/YYYYMMDD-<feature-slug>-plan.md`.
 
 This is the hard gate. Nothing before this point touches the org or the repo's buildable code.
@@ -185,15 +192,22 @@ dispatched to parallel subagents; tasks that depend on each other still run in s
 1. **Compute the ready set.** A task is ready when every task in its `Depends On` list is `D`.
 2. **Split the ready set into parallel-safe groups.** Two ready tasks can run in the same batch
    only if their `Touches` values don't overlap (no shared file/component). If a task's `Touches`
-   is unclear or ambiguous, treat it as not parallel-safe — run it alone.
+   is unclear or ambiguous, treat it as not parallel-safe — run it alone. **This applies
+   regardless of Owner Skill** — two tasks both owned by `sf-dev` (e.g. two independent LWC
+   components, or two unrelated Apex classes) are just as eligible for the same parallel batch as
+   two tasks owned by different skills, as long as their `Touches` don't overlap. Parallel
+   eligibility is decided by `Touches`, never by which skill owns the task.
 3. **Dispatch the batch:**
    - **Batch of 1** → run directly in the main thread, exactly as before (no subagent overhead
      for solo work).
    - **Batch of 2+** → dispatch each task to a separate subagent via the Task tool, in the same
-     turn. Each subagent prompt must state explicitly: the task description, the exact file(s) in
-     `Touches`, and "follow `sf-[owner skill]`'s conventions exactly as if that skill were invoked
-     directly" — never duplicate that skill's rules into the prompt, just name it and let it
-     trigger in the subagent's own context.
+     turn. This holds even when two or more tasks in the batch share the same Owner Skill (e.g.
+     two `sf-dev` tasks) — each still gets its own subagent, invoked independently; never route
+     two tasks through one subagent just because they'd trigger the same skill. Each subagent
+     prompt must state explicitly: the task description, the exact file(s) in `Touches`, and
+     "follow `sf-[owner skill]`'s conventions exactly as if that skill were invoked directly" —
+     never duplicate that skill's rules into the prompt, just name it and let it trigger in the
+     subagent's own context.
    - **Assign each subagent in a batch a random name from the pool below, unique within that
      batch** — used only as a tracking label in the orchestrator's own narration and Execution Log
      ("Dispatched to Sasha"), never written into code, commits, or file content.
@@ -313,9 +327,11 @@ Permission Set Group `[PSG Name]`
 **Status codes:** `P` Pending · `IP` In Progress · `B` Blocked · `D` Done
 
 **Touches** is what makes parallel dispatch safe: TASK-02, TASK-03, and TASK-04 all depend only on
-TASK-01 and touch different things — they're a valid parallel batch. TASK-05 depends on TASK-03
-and must wait for it. TASK-06 depends on both TASK-04 and TASK-05, so it waits for the slower of
-the two.
+TASK-01 and touch different things — they're a valid parallel batch, dispatched as three separate
+subagents. Note TASK-03 and TASK-04 share the same Owner Skill (`sf-dev`) but still run as two
+independent subagents in that batch — parallel eligibility is decided by `Touches`, not by which
+skill owns the task. TASK-05 depends on TASK-03 and must wait for it. TASK-06 depends on both
+TASK-04 and TASK-05, so it waits for the slower of the two.
 
 ---
 
@@ -398,8 +414,14 @@ best if users need to review before submitting (D) Other — describe your own a
 - ✕ Skipping the Permission Set Strategy decision because the feature "seems simple" — access
   control is part of every feature that touches an object, field, Apex class, or LWC
 - ✕ Assuming a new Permission Set is needed without first scanning for an existing one that fits
+- ✕ Omitting a `sf-security-review` task from Task Breakdown when the plan touches a PII-bearing
+  field/object, adds a new integration/callout, or changes the sharing model
 - ✕ Dispatching two tasks in parallel when their `Touches` overlap, or when either one's
   `Touches` is too vague to be sure it doesn't
+- ✕ Merging two or more same-Owner-Skill tasks into a single subagent because they'd trigger the
+  same skill — each task still gets its own subagent when their `Touches` don't overlap
+- ✕ Treating parallel-safe dispatch as only available across *different* Owner Skills — two tasks
+  under the same skill (e.g. two `sf-dev` tasks) are equally eligible when `Touches` don't overlap
 - ✕ Letting a subagent write directly to the plan file — only the orchestrator writes status/log
   updates, and only after the batch reports back
 - ✕ Reusing the same agent name for two subagents within the same batch

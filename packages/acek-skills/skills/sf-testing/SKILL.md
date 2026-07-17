@@ -3,11 +3,12 @@ name: sf-testing
 description: >
   Use this skill for ANY Salesforce test-related task: writing Apex test classes, building
   TestDataFactory, mocking HTTP callouts, mocking platform events, writing test assertions,
-  generating test coverage reports, debugging test failures, and designing test strategies.
-  Trigger when the user asks to "write a test class", "fix test coverage", "mock a callout",
-  "write a TestDataFactory", "test fails in org but passes locally", "assert this method",
-  or anything about Apex unit testing, test data, or code coverage. Also use when coverage
-  drops below 85% or when AuraHandledException assertions are involved.
+  generating test coverage reports, debugging test failures, designing test strategies, and
+  writing LWC Jest unit tests. Trigger when the user asks to "write a test class", "fix test
+  coverage", "mock a callout", "write a TestDataFactory", "test fails in org but passes locally",
+  "assert this method", "write a jest test", "test this component", or anything about Apex unit
+  testing, LWC unit testing, test data, or code coverage. Also use when coverage drops below 85%
+  or when AuraHandledException assertions are involved.
 ---
 
 # Salesforce Testing Skill
@@ -15,7 +16,10 @@ description: >
 ## Environment Context
 
 - Minimum coverage: **85%** (aim for 90%+)
-- API Version: **67.0** (Summer '26)
+- API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the
+  project's `sfdx-project.json` when scaffolded via SF CLI. When touching an **existing** test
+  class, check its `apiVersion`: below **62.0** → bump to **67.0** as part of the change; 62.0+ →
+  leave as-is unless the task needs 67.0+ behavior specifically.
 - Assertions: prefer the **`Assert` class** (`Assert.areEqual`, `Assert.isTrue`, etc. — API 56.0+)
   over legacy `System.assertEquals`/`System.assert` in new tests
 - `AuraHandledException.getMessage()` in test context **always** returns `'Script-thrown exception'` — this is Salesforce by design, not a bug
@@ -369,6 +373,112 @@ sf apex run test \
 3. Check: are there exception paths not triggered?
 4. Add targeted test methods — do **not** reduce test quality just to hit the number
 5. Never use `@SuppressWarnings` to bypass coverage requirements
+
+---
+
+## LWC Jest Testing
+
+Every new or modified LWC component needs a Jest test file — same discipline as Apex coverage,
+just not gated by a governor limit. This is separate from `sf-devops`'s LWC review checklist
+(structural: naming, wire usage, JSDoc) and from `shaiden`'s design critique (visual/SLDS
+compliance) — this section owns whether the component's *behavior* is actually tested.
+
+### File Location
+
+```
+force-app/main/default/lwc/myComponent/
+├── myComponent.html
+├── myComponent.js
+├── myComponent.css
+├── myComponent.js-meta.xml
+└── __tests__/
+    └── myComponent.test.js
+```
+
+Uses `@salesforce/sfdx-lwc-jest` — run via `npm run test:unit` (or the project's configured Jest
+script), not SF CLI.
+
+### Test Structure — Standard Pattern
+
+```javascript
+import { createElement } from 'lwc';
+import MyComponent from 'c/myComponent';
+import getRelatedItems from '@salesforce/apex/MyController.getRelatedItems';
+
+// Mock the wired Apex method — never let a Jest test hit a real Apex method
+jest.mock(
+    '@salesforce/apex/MyController.getRelatedItems',
+    () => ({ default: jest.fn() }),
+    { virtual: true }
+);
+
+describe('c-my-component', () => {
+    afterEach(() => {
+        while (document.body.firstChild) {
+            document.body.removeChild(document.body.firstChild);
+        }
+        jest.clearAllMocks();
+    });
+
+    // ─── Happy Path ────────────────────────────────────────────────────────
+    it('renders items after the wire resolves', async () => {
+        const element = createElement('c-my-component', { is: MyComponent });
+        document.body.appendChild(element);
+
+        getRelatedItems.emit([{ Id: '001', Name: 'Test Item' }]);
+        await Promise.resolve();
+
+        const items = element.shadowRoot.querySelectorAll('.my-component__item');
+        expect(items.length).toBe(1);
+    });
+
+    // ─── Empty State ───────────────────────────────────────────────────────
+    it('shows the empty state when there is no data', async () => {
+        const element = createElement('c-my-component', { is: MyComponent });
+        document.body.appendChild(element);
+
+        getRelatedItems.emit([]);
+        await Promise.resolve();
+
+        expect(element.shadowRoot.querySelector('.my-component__empty')).not.toBeNull();
+    });
+
+    // ─── Interaction / Error Path ──────────────────────────────────────────
+    it('fires the itemselected event on click', () => {
+        const element = createElement('c-my-component', { is: MyComponent });
+        document.body.appendChild(element);
+
+        const handler = jest.fn();
+        element.addEventListener('itemselected', handler);
+        element.shadowRoot.querySelector('button')?.click();
+
+        expect(handler).toHaveBeenCalled();
+    });
+});
+```
+
+### Rules
+
+- **Minimum 3 scenarios** per component — same bar as Apex: happy/rendered path, empty state, one
+  interaction or error path
+- Mock every `@wire`/imperative Apex import — a Jest test that reaches a real Apex method is broken
+- Query only through `element.shadowRoot` — never reach into the component's internals directly
+- Assert on rendered output (DOM nodes, text, fired events), not on private component state
+- Run `npm run test:unit` before every PR — same gate as Apex coverage, checked in `sf-devops`'s
+  review
+
+### Run Commands
+
+```bash
+# Run all LWC Jest tests
+npm run test:unit
+
+# Run a single component's tests
+npx sfdx-lwc-jest -- myComponent
+
+# Watch mode during development
+npx sfdx-lwc-jest --watch
+```
 
 ---
 

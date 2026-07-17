@@ -13,7 +13,12 @@ description: >
 
 ## Environment Context
 
-- API Version: **67.0** (Summer '26)
+- API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the
+  project's `sfdx-project.json` when scaffolded via SF CLI (see [File
+  Creation](#-file-creation--always-via-sf-cli-never-manual) below — this is one more reason to
+  always generate, never hand-create). When touching an **existing** class/component, check its
+  `apiVersion`: below **62.0** → bump to **67.0** as part of the change; 62.0+ → leave as-is unless
+  the task needs 67.0+ behavior specifically.
 - Tooling: **SF CLI** (`sf` commands)
 - Apex LSP: **offline** — never use compile-time SObject type references that require org metadata
 - Version control: **GitHub** (branching: `main → staging → develop → feature/*`)
@@ -174,10 +179,11 @@ public static Result myMethod(String param) {
 
 | Type         | Convention                 | Example                               |
 | ------------ | -------------------------- | ------------------------------------- |
-| Apex Class   | PascalCase                 | `AccountHelper`, `OpportunityTrigger` |
-| Test Class   | PascalCase + `Test` suffix | `AccountHelperTest`                   |
-| Custom Field | PascalCase\_\_c            | `ProjectStatus__c`                    |
-| Variable     | camelCase                  | `accountList`, `oppMap`               |
+| Apex Class   | PascalCase                       | `AccountHelper`, `OpportunityService` |
+| Test Class   | PascalCase + `Test` suffix       | `AccountHelperTest`                   |
+| Apex Trigger | `<Object>Trigger`, one per object | `AccountTrigger`, `OpportunityTrigger` |
+| Custom Field | PascalCase\_\_c                  | `ProjectStatus__c`                    |
+| Variable     | camelCase                        | `accountList`, `oppMap`               |
 
 ### ApexDoc (required on all public methods)
 
@@ -194,34 +200,17 @@ public static List<Result__c> processRecord(Id recordId) { ... }
 
 ### Test Class Pattern
 
-```apex
-@isTest
-private class AccountHelperTest {
-    @TestSetup
-    static void makeData() {
-        // create test records once for all test methods
-    }
+Full test class structure, `TestDataFactory` usage, callout/platform-event mocking, and assertion
+conventions are owned by `sf-testing` — follow that skill's pattern exactly rather than
+improvising a competing one here. Two things worth remembering while writing the code being
+tested:
 
-    @isTest
-    static void testPositivePath() {
-        Test.startTest();
-        // call method
-        Test.stopTest();
-        // assert
-    }
-
-    @isTest
-    static void testNegativePath_insufficientPermission() {
-        // test exception path
-        try {
-            AccountHelper.myMethod(null);
-            Assert.fail('Expected exception not thrown');
-        } catch (AuraHandledException e) {
-            Assert.areEqual('Script-thrown exception', e.getMessage(), 'AuraHandledException message is masked in test context by design');
-        }
-    }
-}
-```
+- `AuraHandledException.getMessage()` always returns `'Script-thrown exception'` in test context
+  (Salesforce by design) — the test asserting your exception path is expected to check this exact
+  string, not your real error message
+- Structure the method so `Test.startTest()` / `Test.stopTest()` around the call actually resets
+  governor limits and forces async paths (Queueable, `@future`, Platform Events) to run — don't
+  write logic that fights that boundary
 
 ---
 
@@ -442,4 +431,6 @@ sf apex run --target-org <alias> --file scripts/apex/myScript.apex
 - [ ] No `WITH SECURITY_ENFORCED` in SOQL — removed in API 67.0
 - [ ] All `@AuraEnabled` methods wrapped in try-catch → `AuraHandledException`
 - [ ] LWC uses SLDS 2 hooks (`var(--slds-g-*, fallback)`) — no hardcoded hex/px, no `.slds-*` overrides
+- [ ] New/modified LWC has a Jest test file under `__tests__/` — see `sf-testing`'s LWC Jest
+      Testing section for the pattern; don't improvise a competing one
 - [ ] Version badge present _if the project has adopted that convention_ (not required by default)

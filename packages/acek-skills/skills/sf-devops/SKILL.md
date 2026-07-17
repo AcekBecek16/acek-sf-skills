@@ -14,7 +14,10 @@ description: >
 
 ## Environment Context
 
-- API Version: **67.0** (Summer '26)
+- API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the
+  project's `sfdx-project.json` when scaffolded via SF CLI. When touching an **existing**
+  class/component/metadata item, check its `apiVersion`: below **62.0** → bump to **67.0** as part
+  of the change; 62.0+ → leave as-is unless the task needs 67.0+ behavior specifically.
 - Branching: `main → staging → develop → feature/*`
 - Production org alias: **`{{PROD_ORG_ALIAS}}`**
 - Sandbox/dev org alias: **`{{DEV_ORG_ALIAS}}`**
@@ -64,6 +67,8 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
       an LWC missing its `js-meta.xml` will fail to deploy or stay invisible in the org
 - [ ] No `@wire` adapter inside a loop
 - [ ] All public `@api` properties have JSDoc
+- [ ] Jest test file exists under `__tests__/` covering at least happy path, empty state, and one
+      interaction/error path (see `sf-testing`'s LWC Jest Testing section) — no LWC ships untested
 
 > **Out of scope for this checklist:** CSS/styling conventions and design system compliance.
 > That belongs to whichever skill built the component — `sf-dev` (standard SLDS 2 styling) or

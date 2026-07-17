@@ -161,6 +161,13 @@ using the project's actual stack, referencing the anchor by name.
 - **Be opinionated** — don't just list options, recommend the best one and explain why.
 - **Think Salesforce seasons** — flag if an idea aligns with an upcoming Salesforce release
   feature that could reduce build effort.
+- **Hand off, don't build.** This skill's job stops at generating and prioritizing ideas — it
+  never writes code, metadata, or a plan file itself, and its output is intentionally **not
+  persisted** to a file. For a **Big Bet** or any idea that needs a real architecture decision
+  (data model, Flow vs Apex, integration pattern, security model), hand off to `sf-architect` — its
+  plan file is where the idea becomes durable. For an idea that should become a formally scoped
+  feature with requirements and acceptance criteria first, hand off to `sf-ba` to write a PRD.
+  Don't try to make this skill's output do either job.
 
 ---
 
@@ -175,3 +182,4 @@ using the project's actual stack, referencing the anchor by name.
 | "apa next step dari PRD [name]?"                                 | Anchor = that PRD (confirm it's closed/approved). Run Extension Questions                                              |
 | "prioritas enhancement mana yang paling worth it?"               | Requires a prior anchored ideation output in this conversation to rank — if none exists, ask which anchor to run first |
 | "ada yang bisa diimprove dari sisi performance?" (no name given) | No anchor — scan project, ask which component to focus the Performance lens on                                         |
+| "let's build idea #[N]" / "jalankan ide nomor [N]"               | Hand off — don't execute here. Route to `sf-architect` if it needs a technical decision, or `sf-ba` if it needs a PRD first |

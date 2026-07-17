@@ -14,7 +14,12 @@ description: >
 
 ## Environment Context
 
-- API Version: **67.0** (Summer '26)
+- API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the
+  project's `sfdx-project.json` when scaffolded via SF CLI. When reviewing an **existing**
+  class/component, check its `apiVersion`: below **62.0** → recommend bumping to **67.0** as part
+  of the change; 62.0+ → confirm whether the [API 67.0+ Default Security
+  Model](#-api-670-default-security-model-summer-26) applies before deciding whether a missing
+  manual check is a real gap.
 - Apex LSP: **offline** — use `Schema.getGlobalDescribe()` pattern (not compile-time SObject reference)
 - All security decisions must be documented in the relevant CR before production deploy
 
@@ -367,6 +372,56 @@ When PII-bearing objects/fields are part of the change being reviewed, add to th
 - If sandbox testing was involved, confirm masked data was used
 - If Shield Platform Encryption is warranted, confirm it's applied
 - No PII appears in debug logs, exception messages surfaced to users, or committed code/tests
+
+---
+
+## Guest User & Experience Cloud Access
+
+Guest User (unauthenticated Experience Cloud / site visitor) access is one of the highest-risk
+misconfigurations in Salesforce — a single overly-broad Guest User sharing rule or OWD setting can
+expose record data to anyone on the internet, no login required.
+
+### Review Checklist
+
+- [ ] Guest User profile has **no** object permissions beyond what the public-facing page
+      genuinely needs to render — verify against the actual Experience Cloud page, not assumption
+- [ ] No Guest User sharing rule or "Public Read/Write" OWD grants access to a PII-bearing object
+      (see [PII & Data Privacy](#pii--data-privacy)) unless explicitly required and documented
+- [ ] "Secure Guest User Record Access" org setting is enabled (Setup → Sharing Settings) — this
+      caps Guest User access to explicit sharing rules rather than the older default-access model
+- [ ] Guest User cannot create/edit/delete records unless the page's actual function requires it
+      (e.g. a public intake form) — CRUD checked per object, not granted broadly
+- [ ] No Apex class exposed to Guest User (`without sharing` + `global`/`@AuraEnabled` reachable
+      from a public page) returns fields beyond what the page displays — treat any Guest-reachable
+      Apex method as a public API surface, not an internal helper
+- [ ] Community/site URLs referencing record IDs are validated server-side, not trusted as proof
+      of access — a guessable/enumerable ID in a public URL is not an access control
+
+Treat any change that touches a Guest User profile, an Experience Cloud page, or a
+Guest-reachable Apex method as requiring this checklist, in addition to the standard Apex/LWC
+review above.
+
+---
+
+## Connected App & External Client App Review
+
+Relevant whenever a change introduces or modifies a Connected App, External Client App, or any
+OAuth-based integration.
+
+### Review Checklist
+
+- [ ] OAuth scopes requested are the **minimum** needed for the integration's actual purpose —
+      flag broad scopes (`full`, `api` when something narrower would do) without a documented
+      reason
+- [ ] Refresh token policy is explicit (expire on inactivity / never expire) — "never expire" needs
+      a documented justification, not a default
+- [ ] IP restriction is "Enforce IP restrictions" + Trusted IP Ranges unless the integration
+      genuinely runs from unpredictable IPs
+- [ ] Callback URL(s) are exact, not wildcarded, unless the integration pattern requires it
+- [ ] The integration/running user for the app has the minimum Permission Set needed — never
+      "System Administrator" as a convenience default
+- [ ] Client secret / certificate lives in a secrets manager or Named Credential — never committed
+      to source control or hardcoded in an integration script
 
 ---
 

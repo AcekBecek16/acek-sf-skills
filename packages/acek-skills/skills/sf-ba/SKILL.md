@@ -29,6 +29,14 @@ running `sf-architect` first, or right after — it consumes the PRD as input an
 technical execution plan. `sf-ba` decides WHAT to build; `sf-architect` decides HOW and in what
 order. Don't try to make the PRD carry both.
 
+**Admin Spec and Dev Spec are for work that will NOT go through `sf-architect`** — e.g. handing
+instructions to a human admin/dev directly, or documenting a declarative/code change after the
+fact for the record. If the work is going to be executed via an `sf-architect` plan, skip writing
+these specs: `sf-architect`'s Task Breakdown (with each task's Owner Skill and exact `Touches`)
+already carries that execution detail, and a separately-written spec would just be a second copy
+of the same decisions to keep in sync by hand. Write the PRD, hand it to `sf-architect`, and let
+the plan carry the rest.
+
 ---
 
 ## Document Types

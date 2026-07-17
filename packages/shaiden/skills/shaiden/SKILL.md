@@ -16,6 +16,7 @@ Shaiden is not a coding skill — it is a **design craft skill** that produces L
 | Command             | Purpose                                              |
 | ------------------- | ---------------------------------------------------- |
 | `/shaiden init`      | Bootstrap design system for the project              |
+| `/shaiden evolve`    | Amend `design.md` after a brand change, without a full re-init |
 | `/shaiden craft`     | Build a new component from brand brief               |
 | `/shaiden amend`     | Add or modify elements in an existing component      |
 | `/shaiden critique`  | Audit a component and generate a scored critique     |
@@ -87,6 +88,8 @@ Alignment with `design.md` tokens. Spacing rhythm, corner radius, color palette 
 - Loading state: present with `lightning-spinner` and `alternative-text`
 - All interactive elements have `aria-label` or visible label
 - State not conveyed by color alone — icon or text accompanies
+- Remains usable at narrow viewport widths (Salesforce mobile app, narrow Lightning panes) — no
+  fixed pixel widths that break the layout below the component's minimum comfortable size
 
 ### 5. Human Touch & Distinctiveness (0–8)
 
@@ -232,6 +235,42 @@ Duration: --slds-g-duration-quickly (100ms) for micro, --slds-g-duration-slowly 
 
 ---
 
+## Phase 1b — EVOLVE
+
+**Trigger:** `/shaiden evolve`
+
+**Goal:** Update one or more sections of an existing `design.md` when the brand changes, without
+discarding history or forcing a full re-init.
+
+### Step 1 — Load & Scope
+
+Read the current `design.md`. Ask which section(s) are changing (color palette, typography,
+spacing, radius, motion, signature element) — present as a choice, not open text.
+
+### Step 2 — Discuss the Change
+
+Run only the relevant slice of the [Brand Discovery Discussion](#step-2--brand-discovery-discussion)
+for the section(s) being changed — don't re-ask about sections that aren't changing.
+
+### Step 3 — Update design.md
+
+Apply the change. Update `Last updated: [date] via /shaiden evolve` at the top of the file. Leave
+every other section untouched.
+
+### Step 4 — Flag Stale Components
+
+Any component in `product.md` scored while the old token value was in effect is now potentially
+inconsistent with the new one. Mark every row that used the changed token category with `*` (the
+same staleness convention AMEND uses) and tell the user:
+
+> "design.md updated — [N] components may now be inconsistent with the new [token category]. Run
+> `/shaiden critique` on them when convenient."
+
+Don't auto-run critique on every affected component — that re-scoring decision belongs to the
+user, not this command.
+
+---
+
 ## Phase 2 — CRAFT
 
 **Trigger:** `/shaiden craft`
@@ -281,6 +320,10 @@ with the design system's signature direction]
 **Motion:**
 [none / what and when]
 
+**Responsive behavior:**
+[How it adapts at narrow widths — Salesforce mobile app, narrow Lightning panes, split-view
+record pages. No fixed pixel widths that break layout below a card's minimum comfortable size.]
+
 **States to handle:**
 - Loading: [approach]
 - Empty: [copy]
@@ -291,7 +334,21 @@ Wait for user approval. If user requests changes, revise the brief before procee
 
 ### Step 4 — BUILD
 
-After approval, generate the component:
+**Scaffold first, via SF CLI — never hand-assemble the file set.** Before writing any content,
+generate the component skeleton with:
+
+```bash
+sf lightning generate component --name <componentName> --type lwc --output-dir force-app/main/default/lwc
+```
+
+This is the same rule `sf-dev` enforces under its "File Creation — Always via SF CLI" section —
+the CLI is what guarantees `.js-meta.xml` exists and is well-formed, which is the #1 cause of a
+component failing to deploy or staying invisible in the org. Shaiden then edits the generated
+files in place; it never deletes or recreates them by hand. If the SF CLI isn't available in the
+environment, fall back to hand-creating the full file set and explicitly verify `.js-meta.xml`
+exists before considering the component built.
+
+After scaffolding, generate the component content:
 
 **Non-negotiables:**
 
@@ -305,7 +362,10 @@ After approval, generate the component:
 - All three states (loading, empty, error) implemented
 - `lwc:if` not `if:true` (API v59+)
 
-**File output:** HTML + CSS + JS skeleton (wire/imperative scaffolded based on context)
+**File output:** `.html`, `.js`, `.css`, and `.js-meta.xml` — scaffolded via SF CLI above,
+wire/imperative logic in `.js` based on context. A Jest test file under `__tests__/` follows
+`sf-testing`'s LWC Jest pattern — not this skill's job to write, but flag it as outstanding if the
+user wants the component shippable, not just designed.
 
 ### Step 5 — Register
 
@@ -517,6 +577,19 @@ Ask if not provided:
 - **Target** — the component that needs to be aligned
 
 Both must exist in the project. Source does not need to be in `product.md` but target will be registered if not already.
+
+### Step 1.5 — Validate the Source First
+
+Before treating the source as the reference, check it against `design.md` (same checks as
+CRITIQUE's SLDS 2 Compliance and Visual Consistency aspects — hardcoded values, missing fallbacks,
+non-hook spacing/typography). If the source itself has meaningful violations, surface them before
+proceeding:
+
+> "Source component [name] has [N] design-system violations of its own (e.g. hardcoded
+> `background-color: #fff`). Harmonizing the target to match it will copy these violations too.
+> Fix the source first, harmonize anyway, or pick a different source?"
+
+Only proceed to Gap Analysis once the user confirms which path to take.
 
 ### Step 2 — Gap Analysis
 

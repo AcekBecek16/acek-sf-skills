@@ -14,7 +14,10 @@ description: >
 
 ## Environment Context
 
-- API Version: **67.0** (Summer '26)
+- API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the
+  project's `sfdx-project.json` when scaffolded via SF CLI. When touching an **existing**
+  class/component/metadata item, check its `apiVersion`: below **62.0** → bump to **67.0** as part
+  of the change; 62.0+ → leave as-is unless the task needs 67.0+ behavior specifically.
 - Tooling: **SF CLI** (`sf data` commands) for dev/test volumes; Data Loader for production volumes
 - Always migrate to **sandbox first**, verify, then production
 - Single org: sandbox → production
