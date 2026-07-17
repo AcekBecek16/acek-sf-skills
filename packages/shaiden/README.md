@@ -65,6 +65,7 @@ the skill's trigger description):
 | Command | Purpose |
 |---|---|
 | `/shaiden init` | Scan existing components (if any) and establish the project's design identity → generates `design.md` |
+| `/shaiden evolve` | Amend one or more sections of an existing `design.md` after a brand change, without a full re-init |
 | `/shaiden craft` | Build a new component from a design brief, grounded in `design.md` |
 | `/shaiden amend` | Add or modify elements in an existing component, preserving design alignment |
 | `/shaiden critique` | Audit a component against the scoring system, generate a critique file |
@@ -86,6 +87,17 @@ Then it runs an interactive discovery discussion covering brand personality, pri
 surface hierarchy, corner radius, typography stance, motion stance, spacing unit, and a
 "signature direction" (one recurring visual detail every component will share). The output is
 `design.md` at the project root — the single source of truth every other phase reads from.
+</details>
+
+<details>
+<summary><strong>/shaiden evolve</strong> — update the design system after a brand change</summary>
+
+For when the brand changes but a full re-init would discard history. Asks which section(s) of
+`design.md` are changing (color, typography, spacing, radius, motion, signature element), runs
+only the discovery questions for that slice, then updates just those sections and stamps a
+`Last updated: [date] via /shaiden evolve` line — everything else in the file is left untouched.
+Any component in `product.md` scored under the old token values is flagged stale (`*`) so you know
+what to re-`critique`, without shaiden auto-running critique on your behalf.
 </details>
 
 <details>
@@ -135,11 +147,15 @@ just updates the open-issue count and keeps the file.
 <summary><strong>/shaiden harmonize</strong> — align one component to another</summary>
 
 Takes a source component (the design reference) and a target component (the one that needs to
-match), reads both plus `design.md`, and produces a **gap report**: spacing, color, typography,
-and structural differences between them. After your confirmation, it applies changes to the
-target only — the source is never touched, and the target's functional logic and content are
-preserved, only its visual tokens and structure are aligned. Useful for bringing an older
-component up to the current design system without a full rebuild.
+match). Before treating the source as authoritative, it validates the source itself against
+`design.md` (the same checks CRITIQUE runs for SLDS 2 Compliance and Visual Consistency) — if the
+source has its own violations, it says so and asks whether to fix the source first, harmonize
+anyway, or pick a different source. Once confirmed, it reads both components plus `design.md` and
+produces a **gap report**: spacing, color, typography, and structural differences between them.
+After your confirmation, it applies changes to the target only — the source is never touched, and
+the target's functional logic and content are preserved, only its visual tokens and structure are
+aligned. Useful for bringing an older component up to the current design system without a full
+rebuild.
 </details>
 
 ## Scoring system
@@ -151,7 +167,7 @@ Five aspects, 8 points each, 40 total:
 | Visual Consistency | Alignment with `design.md` tokens — spacing rhythm, radius, palette |
 | SLDS 2 Compliance | `--slds-g-*` hooks only, always with a fallback, no private hooks, no `.slds-*` overrides |
 | Typography & Spacing Precision | Intentional type scale, no magic numbers |
-| UX & Accessibility | Loading/empty/error states present and directive, `aria-label`s, no color-only signaling |
+| UX & Accessibility | Loading/empty/error states present and directive, `aria-label`s, no color-only signaling, usable at narrow viewport widths (Salesforce mobile app, narrow Lightning panes) |
 | Human Touch & Distinctiveness | Doesn't feel templated; has one deliberate signature element |
 
 | Score | Band | Recommendation |

@@ -149,7 +149,9 @@ metadata is touched: runs Discovery (project scan + choice-based clarifying ques
 text), proposes Decisions with trade-offs for data model / automation layer / integration pattern
 / security model / Permission Set strategy, then breaks approved work into tasks dispatched to the
 right skill (`sf-admin`, `sf-dev`, `sf-testing`, `sf-devops`, `sf-security-review`,
-`sf-data-migration`). Plans are saved to `instructions/architecture/` and are resumable across
+`sf-data-migration`) — always including a `sf-security-review` task when the plan touches a
+PII-bearing object/field, an integration, or a sharing/OWD change. Plans are saved to
+`instructions/architecture/` and are resumable across
 sessions without re-scanning the project or re-reading chat history. Complements — does not
 replace — `sf-ba` (PRDs) and `sf-ideation` (open-ended brainstorming), and can consume either as
 input.
@@ -177,7 +179,10 @@ data management (import/export/data loader) — anything declarative, no code in
 
 Writes PRDs, user stories, feature specs, and functional requirements — structured Markdown docs
 intended to hand off to an admin or developer. Triggers on "write a PRD", "document requirements",
-"write user stories", or when a business problem needs to become executable documentation.
+"write user stories", or when a business problem needs to become executable documentation. Its
+Admin Spec / Dev Spec templates are for work that will **not** go through `sf-architect`; for
+open-ended brainstorming on a specific existing component instead of net-new requirements, it
+hands off to `sf-ideation`.
 
 </details>
 
@@ -230,8 +235,9 @@ opportunities.
 
 CRUD/FLS checks, sharing model review, `with sharing` enforcement, SOQL injection, XSS in LWC,
 hardcoded credential detection, and a production sign-off checklist. Also covers Shield,
-encryption, audit trail, and a dedicated PII & Data Privacy section — field classification,
-sandbox data masking, and UU PDP-aware review practices.
+encryption, audit trail, a dedicated PII & Data Privacy section — field classification, sandbox
+data masking, and UU PDP-aware review practices — plus Guest User/Experience Cloud access review
+and Connected App/External Client App (OAuth) review checklists.
 
 </details>
 
@@ -239,8 +245,9 @@ sandbox data masking, and UU PDP-aware review practices.
 <summary><strong>sf-testing</strong> — Apex test strategy</summary>
 
 Test classes, `TestDataFactory` patterns, mocking HTTP callouts and platform events, test
-assertions, coverage reports, and debugging org-only test failures. Enforces the 85% coverage
-floor and `AuraHandledException` assertion conventions.
+assertions, coverage reports, debugging org-only test failures, and LWC Jest unit tests
+(`@salesforce/sfdx-lwc-jest`). Enforces the 85% Apex coverage floor, `AuraHandledException`
+assertion conventions, and a 3-scenario minimum (happy/empty/interaction) for every LWC component.
 
 </details>
 
@@ -310,7 +317,7 @@ responds, and doesn't touch any org, sandbox, or production data on its own.
 Yes — deselect any skill in the interactive wizard, or use `install <name>` for a single one.
 
 **Can I re-run install to update after a new version is published?**
-Yes, `npx` always resolves the latest version unless you pin one (`npx acek-skills@1.2.0 install`).
+Yes, `npx` always resolves the latest version unless you pin one (`npx acek-skills@1.3.0 install`).
 Re-running overwrites previously installed files for the skills/targets you select.
 
 **Why do only Claude Code skills auto-trigger?**

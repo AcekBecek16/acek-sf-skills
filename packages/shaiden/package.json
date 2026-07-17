@@ -1,6 +1,6 @@
 {
 	"name": "@nullbotdotexe/shaiden",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Shaiden (紫電) — installable Claude Code skill for LWC Design Precision: SLDS 2 tokens, component craft/critique/polish workflow, and design system consistency",
 	"bin": {
 		"shaiden": "bin/cli.js"
