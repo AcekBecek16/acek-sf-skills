@@ -10,6 +10,7 @@ const target = args[1]; // optional: specific skill name, or "--all"
 
 const SKILLS_SRC = path.join(__dirname, '../skills');
 const COMMANDS_SRC = path.join(__dirname, '../commands');
+const AGENTS_SRC = path.join(__dirname, '../agents');
 
 function printBanner() {
 	console.log(`\x1b[36m
@@ -28,6 +29,7 @@ const TARGETS = {
 		label: 'Claude Code — project (./.claude/skills)',
 		dir: (cwd) => path.join(cwd, '.claude/skills'),
 		commandsDir: (cwd) => path.join(cwd, '.claude/commands'),
+		agentDir: (cwd) => path.join(cwd, '.claude/agents'),
 		format: 'claude',
 		selected: true,
 	},
@@ -35,6 +37,7 @@ const TARGETS = {
 		label: 'Claude Code — global (~/.claude/skills)',
 		dir: () => path.join(os.homedir(), '.claude/skills'),
 		commandsDir: () => path.join(os.homedir(), '.claude/commands'),
+		agentDir: () => path.join(os.homedir(), '.claude/agents'),
 		format: 'claude',
 		selected: false,
 	},
@@ -120,6 +123,30 @@ function installCommandToTarget(commandName, targetKey, cwd, aliases = {}) {
 		aliases,
 	);
 	fs.writeFileSync(path.join(destDir, `${commandName}.md`), content);
+}
+
+// Sub-agents (.claude/agents/*.md) are dispatched by sf-architect via the
+// Agent tool (subagent_type: sf-<skill>) — one per owner skill, same
+// technical id as the matching skill folder. Like commands, they're a
+// Claude-Code-only concept: Cursor/Windsurf/Copilot have no subagent
+// equivalent, so they only ever install to 'claude' format targets.
+function listAgents() {
+	if (!fs.existsSync(AGENTS_SRC)) return [];
+	return fs
+		.readdirSync(AGENTS_SRC, { withFileTypes: true })
+		.filter((e) => e.isFile() && e.name.endsWith('.md'))
+		.map((e) => e.name.replace(/\.md$/, ''));
+}
+
+function installAgentToTarget(agentName, targetKey, cwd) {
+	const targetDef = TARGETS[targetKey];
+	if (targetDef.format !== 'claude' || !targetDef.agentDir) return;
+	const destDir = targetDef.agentDir(cwd);
+	fs.mkdirSync(destDir, { recursive: true });
+	fs.copyFileSync(
+		path.join(AGENTS_SRC, `${agentName}.md`),
+		path.join(destDir, `${agentName}.md`),
+	);
 }
 
 // Pulls `name`/`description` out of the SKILL.md frontmatter (YAML folded
@@ -299,6 +326,7 @@ async function runInteractiveInstall() {
 		);
 	}
 
+	const availableAgents = listAgents();
 	const cwd = process.cwd();
 	for (const targetKey of targets) {
 		for (const skillName of skills) {
@@ -307,6 +335,16 @@ async function runInteractiveInstall() {
 		console.log(
 			`✅ ${skills.length} skill(s) installed to ${TARGETS[targetKey].label}`,
 		);
+
+		const agentsToInstall = skills.filter((s) => availableAgents.includes(s));
+		if (agentsToInstall.length > 0 && TARGETS[targetKey].agentDir) {
+			for (const agentName of agentsToInstall) {
+				installAgentToTarget(agentName, targetKey, cwd);
+			}
+			console.log(
+				`✅ ${agentsToInstall.length} sub-agent(s) installed to ${TARGETS[targetKey].label}`,
+			);
+		}
 
 		if (skills.includes('sf-architect') && TARGETS[targetKey].commandsDir) {
 			installCommandToTarget('sf-init', targetKey, cwd, aliases);
@@ -340,6 +378,17 @@ async function main() {
 			console.log(
 				`✅ All ${available.length} skill(s) installed to ${TARGETS['claude-project'].label}`,
 			);
+			const agentsToInstall = listAgents().filter((a) =>
+				available.includes(a),
+			);
+			for (const agentName of agentsToInstall) {
+				installAgentToTarget(agentName, 'claude-project', process.cwd());
+			}
+			if (agentsToInstall.length > 0) {
+				console.log(
+					`✅ ${agentsToInstall.length} sub-agent(s) installed to ${TARGETS['claude-project'].label}`,
+				);
+			}
 			if (available.includes('sf-architect')) {
 				installCommandToTarget(
 					'sf-init',
@@ -370,6 +419,12 @@ async function main() {
 			console.log(
 				`✅ Installed skill: ${target} → ${TARGETS['claude-project'].label}`,
 			);
+			if (listAgents().includes(target)) {
+				installAgentToTarget(target, 'claude-project', process.cwd());
+				console.log(
+					`✅ Installed sub-agent: ${target} → ${TARGETS['claude-project'].label}`,
+				);
+			}
 			if (target === 'sf-architect') {
 				installCommandToTarget(
 					'sf-init',
@@ -397,6 +452,11 @@ async function main() {
 			console.log('\n⚡ Available commands:');
 			commands.forEach((c) => console.log(`  - /${c}`));
 		}
+		const agents = listAgents();
+		if (agents.length > 0) {
+			console.log('\n🤖 Available sub-agents (dispatched by sf-architect):');
+			agents.forEach((a) => console.log(`  - ${a}`));
+		}
 	} else {
 		console.log(`
 Usage:
@@ -404,7 +464,12 @@ Usage:
   acek-skills install --all        Install all skills to Claude Code (project), no prompts
   acek-skills install <name>       Install a single skill to Claude Code (project), no prompts
 
-  acek-skills list                 List available skills and commands
+  acek-skills list                 List available skills, commands, and sub-agents
+
+Each installed skill that has a matching sub-agent (same technical id, e.g. sf-dev) also installs
+that sub-agent to .claude/agents/ (Claude Code targets only — Cursor/Windsurf/Copilot have no
+subagent equivalent). sf-architect dispatches these during Phase 4 execution instead of following
+their conventions itself.
 
 Installing sf-architect also installs its companion /sf-init slash command (Claude Code targets
 only — Cursor/Windsurf/Copilot have no slash-command equivalent). Run /sf-init once per project

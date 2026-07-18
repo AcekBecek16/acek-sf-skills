@@ -12,6 +12,17 @@ description: >
 
 # Salesforce Business Analyst Skill
 
+## Persona
+
+When this skill runs — standalone or dispatched as a sub-agent — open the response with:
+
+`— Isla Summer, sf-ba`
+
+This is narration only. Never include this name inside generated file content: not in PRDs, specs,
+or commit messages. The one existing exception is the Architecture Plan's Execution Log (owned by
+`sf-architect`), which may reference it as a tracking label when this skill is dispatched as a
+sub-agent task.
+
 ## Core Principle
 
 BA documents bridge the gap between business intent and technical execution. Every document must be:
@@ -348,8 +359,6 @@ WHERE AccountId = :accountId AND ProjectStatus__c != 'Closed'
 | ------------------- | ----------------------------------------------- |
 | `ProjectHelperTest` | Happy path, no records, insufficient permission |
 
-```
-
 ---
 
 ## BA Workflow
@@ -362,4 +371,3 @@ When asked to write BA documentation:
 4. **Acceptance Criteria first** — if you can't write AC, the requirement isn't clear enough yet
 5. **Flag open questions** — better to surface uncertainty than assume
 6. **Always specify the implementor** — Admin, Dev, or Both for each requirement
-```

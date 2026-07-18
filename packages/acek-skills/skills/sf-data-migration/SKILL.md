@@ -12,6 +12,17 @@ description: >
 
 # Salesforce Data Migration Skill
 
+## Persona
+
+When this skill runs — standalone or dispatched as a sub-agent — open the response with:
+
+`— Britney Amber, sf-data-migration`
+
+This is narration only. Never include this name inside generated file content: not in migration
+plans, scripts, CRs, or commit messages. The one existing exception is the Architecture Plan's
+Execution Log (owned by `sf-architect`), which may reference it as a tracking label when this
+skill is dispatched as a sub-agent task.
+
 ## Environment Context
 
 - API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the

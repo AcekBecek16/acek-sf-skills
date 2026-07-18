@@ -13,6 +13,17 @@ description: >
 
 # Salesforce Testing Skill
 
+## Persona
+
+When this skill runs — standalone or dispatched as a sub-agent — open the response with:
+
+`— Riley Reid, sf-testing`
+
+This is narration only. Never include this name inside generated file content: not in PRDs, CRs,
+Apex/LWC test code, code comments, or commit messages. The one existing exception is the
+Architecture Plan's Execution Log (owned by `sf-architect`), which may reference it as a tracking
+label when this skill is dispatched as a sub-agent task.
+
 ## Environment Context
 
 - Minimum coverage: **85%** (aim for 90%+)
@@ -381,7 +392,7 @@ sf apex run test \
 Every new or modified LWC component needs a Jest test file — same discipline as Apex coverage,
 just not gated by a governor limit. This is separate from `sf-devops`'s LWC review checklist
 (structural: naming, wire usage, JSDoc) and from `shaiden`'s design critique (visual/SLDS
-compliance) — this section owns whether the component's *behavior* is actually tested.
+compliance) — this section owns whether the component's _behavior_ is actually tested.
 
 ### File Location
 
@@ -407,53 +418,55 @@ import getRelatedItems from '@salesforce/apex/MyController.getRelatedItems';
 
 // Mock the wired Apex method — never let a Jest test hit a real Apex method
 jest.mock(
-    '@salesforce/apex/MyController.getRelatedItems',
-    () => ({ default: jest.fn() }),
-    { virtual: true }
+	'@salesforce/apex/MyController.getRelatedItems',
+	() => ({ default: jest.fn() }),
+	{ virtual: true },
 );
 
 describe('c-my-component', () => {
-    afterEach(() => {
-        while (document.body.firstChild) {
-            document.body.removeChild(document.body.firstChild);
-        }
-        jest.clearAllMocks();
-    });
+	afterEach(() => {
+		while (document.body.firstChild) {
+			document.body.removeChild(document.body.firstChild);
+		}
+		jest.clearAllMocks();
+	});
 
-    // ─── Happy Path ────────────────────────────────────────────────────────
-    it('renders items after the wire resolves', async () => {
-        const element = createElement('c-my-component', { is: MyComponent });
-        document.body.appendChild(element);
+	// ─── Happy Path ────────────────────────────────────────────────────────
+	it('renders items after the wire resolves', async () => {
+		const element = createElement('c-my-component', { is: MyComponent });
+		document.body.appendChild(element);
 
-        getRelatedItems.emit([{ Id: '001', Name: 'Test Item' }]);
-        await Promise.resolve();
+		getRelatedItems.emit([{ Id: '001', Name: 'Test Item' }]);
+		await Promise.resolve();
 
-        const items = element.shadowRoot.querySelectorAll('.my-component__item');
-        expect(items.length).toBe(1);
-    });
+		const items = element.shadowRoot.querySelectorAll('.my-component__item');
+		expect(items.length).toBe(1);
+	});
 
-    // ─── Empty State ───────────────────────────────────────────────────────
-    it('shows the empty state when there is no data', async () => {
-        const element = createElement('c-my-component', { is: MyComponent });
-        document.body.appendChild(element);
+	// ─── Empty State ───────────────────────────────────────────────────────
+	it('shows the empty state when there is no data', async () => {
+		const element = createElement('c-my-component', { is: MyComponent });
+		document.body.appendChild(element);
 
-        getRelatedItems.emit([]);
-        await Promise.resolve();
+		getRelatedItems.emit([]);
+		await Promise.resolve();
 
-        expect(element.shadowRoot.querySelector('.my-component__empty')).not.toBeNull();
-    });
+		expect(
+			element.shadowRoot.querySelector('.my-component__empty'),
+		).not.toBeNull();
+	});
 
-    // ─── Interaction / Error Path ──────────────────────────────────────────
-    it('fires the itemselected event on click', () => {
-        const element = createElement('c-my-component', { is: MyComponent });
-        document.body.appendChild(element);
+	// ─── Interaction / Error Path ──────────────────────────────────────────
+	it('fires the itemselected event on click', () => {
+		const element = createElement('c-my-component', { is: MyComponent });
+		document.body.appendChild(element);
 
-        const handler = jest.fn();
-        element.addEventListener('itemselected', handler);
-        element.shadowRoot.querySelector('button')?.click();
+		const handler = jest.fn();
+		element.addEventListener('itemselected', handler);
+		element.shadowRoot.querySelector('button')?.click();
 
-        expect(handler).toHaveBeenCalled();
-    });
+		expect(handler).toHaveBeenCalled();
+	});
 });
 ```
 

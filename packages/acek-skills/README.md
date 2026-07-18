@@ -23,6 +23,7 @@ Admin • Development • Testing • DevOps • Security Review • Data Migrat
   - [Non-interactive install](#non-interactive-install)
   - [Org alias templating](#org-alias-templating)
   - [Install targets](#install-targets)
+  - [Sub-agents](#sub-agents)
   - [Skills reference](#skills-reference)
   - [CLI reference](#cli-reference)
   - [Project structure](#project-structure)
@@ -83,7 +84,11 @@ Running `install` with no arguments walks you through three prompts:
    converted into that tool's native rule format.
 3. **Org aliases** — only asked if one of the selected skills references them (currently
    `sf-devops` and `sf-data-migration`). Leave blank to fill in later by hand.
-4. **Commands** — if `sf-architect` is selected and at least one Claude Code target is chosen, its
+4. **Sub-agents** — any selected skill that has a matching sub-agent (same technical id, e.g.
+   `sf-dev`) installs it automatically to `.claude/agents/` on Claude Code targets — no separate
+   prompt. See [Sub-agents](#sub-agents). Not installed for Cursor/Windsurf/Copilot targets, which
+   have no subagent concept.
+5. **Commands** — if `sf-architect` is selected and at least one Claude Code target is chosen, its
    companion `/sf-init` slash command installs automatically to `.claude/commands/` — no separate
    prompt. Not installed for Cursor/Windsurf/Copilot targets, which have no slash-command concept.
 
@@ -139,6 +144,36 @@ Cursor and Windsurf approximate it with their own rule-matching; Copilot's custo
 apply more broadly since it has no equivalent trigger mechanism. Check each tool's docs if the
 matching behavior matters for your workflow.
 
+## Sub-agents
+
+`sf-architect` acts as Salesforce's plan-mode orchestrator: once a plan is approved, it dispatches
+each task to the owner skill's own sub-agent (Claude Code's native `Agent` tool, `subagent_type:
+sf-[owner skill]`) instead of following that skill's conventions itself. Every owner skill has a
+matching sub-agent under `agents/`, same technical id as its skill folder, each with a **fixed**
+narrated persona:
+
+| Owner skill (`subagent_type`) | Persona         |
+| ------------------------------ | --------------- |
+| `sf-admin`                     | Eva Lovia       |
+| `sf-dev`                       | Comatozze       |
+| `sf-testing`                   | Riley Reid      |
+| `sf-devops`                    | Channel Preston |
+| `sf-security-review`           | Madison Ivy     |
+| `sf-data-migration`            | Britney Amber   |
+| `sf-ba`                        | Isla Summer     |
+| `sf-ideation`                  | Asa Akira       |
+
+`sf-architect` itself narrates as **Ashley Fires** and is never dispatched as a sub-agent of
+itself — it only ever assigns work out. Personas are narration only (a response signature line);
+they never appear inside generated file content (PRDs, code, commit messages) except as a tracking
+label in the Architecture Plan's Execution Log.
+
+Installing a skill that has a matching sub-agent installs both automatically, to
+`.claude/agents/<name>.md` — Claude Code targets only, since Cursor/Windsurf/Copilot have no
+subagent equivalent (same rule as `/sf-init`, see [Install targets](#install-targets)). A skill's
+sub-agent works standalone too — dispatch it directly with the `Agent` tool — but it's designed to
+be driven by `sf-architect`'s plan-mode flow.
+
 ## Skills reference
 
 <details>
@@ -148,10 +183,10 @@ Salesforce's plan mode. Gates all work behind an approved Architecture Plan befo
 metadata is touched: runs Discovery (project scan + choice-based clarifying questions, never open
 text), proposes Decisions with trade-offs for data model / automation layer / integration pattern
 / security model / Permission Set strategy, then breaks approved work into tasks dispatched to the
-right skill (`sf-admin`, `sf-dev`, `sf-testing`, `sf-devops`, `sf-security-review`,
-`sf-data-migration`) — always including a `sf-security-review` task when the plan touches a
-PII-bearing object/field, an integration, or a sharing/OWD change. Plans are saved to
-`instructions/architecture/` and are resumable across
+right owner skill's **sub-agent** (`sf-admin`, `sf-dev`, `sf-testing`, `sf-devops`,
+`sf-security-review`, `sf-data-migration` — see [Sub-agents](#sub-agents)) — always including a
+`sf-security-review` task when the plan touches a PII-bearing object/field, an integration, or a
+sharing/OWD change. Plans are saved to `instructions/architecture/` and are resumable across
 sessions without re-scanning the project or re-reading chat history. Complements — does not
 replace — `sf-ba` (PRDs) and `sf-ideation` (open-ended brainstorming), and can consume either as
 input.
@@ -260,8 +295,12 @@ lives in its `SKILL.md`.
 acek-skills install              Interactive: pick skills, target IDE(s)/tool(s), and org aliases
 acek-skills install --all        Install all skills to Claude Code (project), no prompts
 acek-skills install <name>       Install a single skill to Claude Code (project), no prompts
-acek-skills list                 List available skills and commands
+acek-skills list                 List available skills, commands, and sub-agents
 ```
+
+Any installed skill with a matching **sub-agent** (`.claude/agents/<name>.md`) installs it
+automatically alongside it — Claude Code targets only, since Cursor/Windsurf/Copilot have no
+subagent equivalent. See [Sub-agents](#sub-agents).
 
 Installing `sf-architect` also installs its companion **`/sf-init`** slash command — Claude Code
 targets only (`.claude/commands/`), since Cursor/Windsurf/Copilot have no slash-command
@@ -283,6 +322,15 @@ skills/
   sf-ideation/SKILL.md
   sf-security-review/SKILL.md
   sf-testing/SKILL.md
+agents/
+  sf-admin.md         sub-agent dispatched by sf-architect (subagent_type: sf-admin) — Claude Code only
+  sf-ba.md
+  sf-data-migration.md
+  sf-dev.md
+  sf-devops.md
+  sf-ideation.md
+  sf-security-review.md
+  sf-testing.md
 commands/
   sf-init.md         /sf-init slash command — companion to sf-architect, Claude Code only
 bin/
@@ -306,6 +354,10 @@ bin/
 2. No CLI changes needed — `list` and `install` pick up any folder under `skills/` automatically.
 3. If the skill needs org-specific values, use the `{{PROD_ORG_ALIAS}}` / `{{DEV_ORG_ALIAS}}`
    placeholders (see [Org alias templating](#org-alias-templating)) rather than hardcoding one.
+4. Optional: to make the skill dispatchable as one of `sf-architect`'s sub-agents, add
+   `agents/<name>.md` with the same technical id as the skill folder — see [Sub-agents](#sub-agents)
+   for the frontmatter shape and persona convention. Also no CLI changes needed; `install` matches
+   agent files to skill names by filename.
 
 ## FAQ
 
@@ -317,8 +369,14 @@ responds, and doesn't touch any org, sandbox, or production data on its own.
 Yes — deselect any skill in the interactive wizard, or use `install <name>` for a single one.
 
 **Can I re-run install to update after a new version is published?**
-Yes, `npx` always resolves the latest version unless you pin one (`npx acek-skills@1.3.0 install`).
+Yes, `npx` always resolves the latest version unless you pin one (`npx acek-skills@1.4.0 install`).
 Re-running overwrites previously installed files for the skills/targets you select.
+
+**What are the sub-agents in `.claude/agents/`?**
+Dispatch targets for `sf-architect`'s plan-mode execution — one per owner skill, invoked via
+Claude Code's `Agent` tool (`subagent_type: sf-[owner skill]`) instead of `sf-architect` following
+that skill's conventions itself. See [Sub-agents](#sub-agents). Only installed for Claude Code
+targets; Cursor/Windsurf/Copilot have no subagent concept.
 
 **Why do only Claude Code skills auto-trigger?**
 Claude Code has a native skill system that matches tasks against each skill's `description`

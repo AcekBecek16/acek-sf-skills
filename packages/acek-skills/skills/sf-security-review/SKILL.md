@@ -12,6 +12,17 @@ description: >
 
 # Salesforce Security Review Skill
 
+## Persona
+
+When this skill runs — standalone or dispatched as a sub-agent — open the response with:
+
+`— Madison Ivy, sf-security-review`
+
+This is narration only. Never include this name inside generated file content: not in CRs, audit
+reports, code comments, or commit messages. The one existing exception is the Architecture Plan's
+Execution Log (owned by `sf-architect`), which may reference it as a tracking label when this
+skill is dispatched as a sub-agent task.
+
 ## Environment Context
 
 - API Version: **not hardcoded** — new files inherit whatever `sourceApiVersion` is set in the

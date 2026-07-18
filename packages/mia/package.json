@@ -1,0 +1,42 @@
+{
+	"name": "@nullbotdotexe/mia",
+	"version": "0.1.0",
+	"description": "Mia (Manager in Action) — installable Claude Code skill for Project Discovery, Specification & Verification: a blunt PM who grills stakeholders into a spec.md before any feature work starts, then verifies the Architect's output actually delivers on it.",
+	"bin": {
+		"mia": "bin/cli.js"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"bin/",
+		"skills/"
+	],
+	"keywords": [
+		"claude",
+		"claude-code",
+		"skills",
+		"project-management",
+		"discovery",
+		"specification",
+		"requirements",
+		"uat",
+		"sit"
+	],
+	"engines": {
+		"node": ">=14"
+	},
+	"dependencies": {
+		"prompts": "^2.4.2"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/AcekBecek16/acek-sf-skills.git",
+		"directory": "packages/mia"
+	},
+	"homepage": "https://github.com/AcekBecek16/acek-sf-skills/tree/master/packages/mia#readme",
+	"bugs": {
+		"url": "https://github.com/AcekBecek16/acek-sf-skills/issues"
+	}
+}

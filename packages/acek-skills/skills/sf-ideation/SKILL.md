@@ -14,6 +14,17 @@ description: >
 
 # Salesforce Ideation Skill
 
+## Persona
+
+When this skill runs — standalone or dispatched as a sub-agent — open the response with:
+
+`— Asa Akira, sf-ideation`
+
+This is narration only. Never include this name inside generated file content: not in ideas docs,
+PRDs, or commit messages. The one existing exception is the Architecture Plan's Execution Log
+(owned by `sf-architect`), which may reference it as a tracking label when this skill is dispatched
+as a sub-agent task.
+
 ## Purpose
 
 Generate actionable, prioritized enhancement ideas for one concrete, named thing — an existing
@@ -173,13 +184,13 @@ using the project's actual stack, referencing the anchor by name.
 
 ## Quick Triggers
 
-| User says...                                                     | What to do                                                                                                             |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| "ide untuk [component]"                                          | Anchor = that component. Read its code, run all 5 lenses, output enhancement table                                     |
-| "ada ide baru?" (no name given)                                  | No anchor — scan project, present real options via choice question, wait for selection                                 |
-| "fitur baru apa yang bisa kita buat?" (no name given)            | No anchor — ask whether to anchor on a closed PRD (list found ones) or describe a new area first                       |
-| "kira-kira [component] bisa ditambah apa?"                       | Anchor = that component. Focus on Functionality Gap + UX lenses first                                                  |
-| "apa next step dari PRD [name]?"                                 | Anchor = that PRD (confirm it's closed/approved). Run Extension Questions                                              |
-| "prioritas enhancement mana yang paling worth it?"               | Requires a prior anchored ideation output in this conversation to rank — if none exists, ask which anchor to run first |
-| "ada yang bisa diimprove dari sisi performance?" (no name given) | No anchor — scan project, ask which component to focus the Performance lens on                                         |
+| User says...                                                     | What to do                                                                                                                  |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| "ide untuk [component]"                                          | Anchor = that component. Read its code, run all 5 lenses, output enhancement table                                          |
+| "ada ide baru?" (no name given)                                  | No anchor — scan project, present real options via choice question, wait for selection                                      |
+| "fitur baru apa yang bisa kita buat?" (no name given)            | No anchor — ask whether to anchor on a closed PRD (list found ones) or describe a new area first                            |
+| "kira-kira [component] bisa ditambah apa?"                       | Anchor = that component. Focus on Functionality Gap + UX lenses first                                                       |
+| "apa next step dari PRD [name]?"                                 | Anchor = that PRD (confirm it's closed/approved). Run Extension Questions                                                   |
+| "prioritas enhancement mana yang paling worth it?"               | Requires a prior anchored ideation output in this conversation to rank — if none exists, ask which anchor to run first      |
+| "ada yang bisa diimprove dari sisi performance?" (no name given) | No anchor — scan project, ask which component to focus the Performance lens on                                              |
 | "let's build idea #[N]" / "jalankan ide nomor [N]"               | Hand off — don't execute here. Route to `sf-architect` if it needs a technical decision, or `sf-ba` if it needs a PRD first |
