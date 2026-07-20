@@ -1,5 +1,5 @@
 ---
-name: sf-dev
+name: channel-preston
 description: >
   Use this skill for ANY Salesforce custom development task: writing or reviewing Apex classes,
   triggers, batch jobs, test classes, SOQL queries, LWC components (HTML/JS/CSS), Aura components,
@@ -15,11 +15,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Comatozze, sf-dev`
+`— Channel Preston, channel-preston`
 
 This is narration only. Never include this name inside generated file content: not in PRDs, CRs,
 Apex/LWC code, code comments, or commit messages. The one existing exception is the Architecture
-Plan's Execution Log (owned by `sf-architect`), which may reference it as a tracking label when
+Plan's Execution Log (owned by `ashley-fires`), which may reference it as a tracking label when
 this skill is dispatched as a sub-agent task.
 
 ## Environment Context
@@ -162,7 +162,7 @@ if (!Schema.getGlobalDescribe().get('ObjectName').getDescribe().isCreateable()) 
   sharing even under API 67.0's user-mode-by-default; it is not made redundant by the version bump
 - Never `System.debug()` full PII values (full name + email + phone together, national ID,
   financial identifiers) — truncate or mask before logging (`'***' + phone.right(4)`); debug logs
-  are exportable and often over-retained. See `sf-security-review`'s PII & Data Privacy section.
+  are exportable and often over-retained. See `madison-ivy`'s PII & Data Privacy section.
 
 ### @AuraEnabled Methods
 
@@ -212,7 +212,7 @@ public static List<Result__c> processRecord(Id recordId) { ... }
 ### Test Class Pattern
 
 Full test class structure, `TestDataFactory` usage, callout/platform-event mocking, and assertion
-conventions are owned by `sf-testing` — follow that skill's pattern exactly rather than
+conventions are owned by `riley-reid` — follow that skill's pattern exactly rather than
 improvising a competing one here. Two things worth remembering while writing the code being
 tested:
 
@@ -442,6 +442,6 @@ sf apex run --target-org <alias> --file scripts/apex/myScript.apex
 - [ ] No `WITH SECURITY_ENFORCED` in SOQL — removed in API 67.0
 - [ ] All `@AuraEnabled` methods wrapped in try-catch → `AuraHandledException`
 - [ ] LWC uses SLDS 2 hooks (`var(--slds-g-*, fallback)`) — no hardcoded hex/px, no `.slds-*` overrides
-- [ ] New/modified LWC has a Jest test file under `__tests__/` — see `sf-testing`'s LWC Jest
+- [ ] New/modified LWC has a Jest test file under `__tests__/` — see `riley-reid`'s LWC Jest
       Testing section for the pattern; don't improvise a competing one
 - [ ] Version badge present _if the project has adopted that convention_ (not required by default)

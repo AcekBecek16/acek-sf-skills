@@ -1,5 +1,5 @@
 ---
-name: sf-security-review
+name: madison-ivy
 description: >
   Use this skill for Salesforce security reviews, vulnerability analysis, and security pattern
   enforcement. Trigger when the user asks to "review security", "check for vulnerabilities",
@@ -16,11 +16,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Madison Ivy, sf-security-review`
+`— Madison Ivy, madison-ivy`
 
 This is narration only. Never include this name inside generated file content: not in CRs, audit
 reports, code comments, or commit messages. The one existing exception is the Architecture Plan's
-Execution Log (owned by `sf-architect`), which may reference it as a tracking label when this
+Execution Log (owned by `ashley-fires`), which may reference it as a tracking label when this
 skill is dispatched as a sub-agent task.
 
 ## Environment Context
@@ -327,7 +327,7 @@ aligned with common data-protection principles (including Indonesia's UU PDP / L
 
 ### Field Classification
 
-Every new field on a person-related object should be classified during creation (in `sf-admin`'s
+Every new field on a person-related object should be classified during creation (in `commatozze`'s
 field checklist) as one of: **Public** / **Internal** / **Confidential** / **Restricted**. Fields
 classified Confidential or Restricted are candidates for:
 
@@ -350,10 +350,10 @@ real people's data in an environment with weaker controls than production.
   scrambles/shuffles/nulls PII fields while preserving referential integrity and data shape for
   testing
 - If Data Mask isn't licensed, mask manually post-refresh: scripted anonymization (see
-  `sf-data-migration`'s cleansing patterns) that replaces names/emails/phones with synthetic
+  `britney-amber`'s cleansing patterns) that replaces names/emails/phones with synthetic
   values before the sandbox is opened up for general dev/QA use
 - **Never** use a full unmasked production copy as a long-lived, broadly-accessible dev sandbox
-- Scratch orgs and test data via `TestDataFactory` (see `sf-testing`) should never be seeded from
+- Scratch orgs and test data via `TestDataFactory` (see `riley-reid`) should never be seeded from
   a production export — always synthetic data
 
 ### Audit Trail & Monitoring
@@ -372,7 +372,7 @@ real people's data in an environment with weaker controls than production.
   — stale Lead/Contact records with no activity are a growing liability, not just clutter
 - If a retention policy exists (check with the org's data protection/compliance function), any
   new automation (Flow/Batch) that creates person-related records should account for it —
-  flag this in `sf-architect`'s Decisions phase when a new data model touches personal data
+  flag this in `ashley-fires`'s Decisions phase when a new data model touches personal data
 
 ### Adding This to a Security Review
 

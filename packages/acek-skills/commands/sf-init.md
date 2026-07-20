@@ -1,14 +1,14 @@
 ---
-description: Bootstrap or refresh the project's architecture.md baseline — org aliases, tech stack, data model, integrations, and Permission Set inventory that sf-architect reads before planning any feature.
+description: Bootstrap or refresh the project's architecture.md baseline — org aliases, tech stack, data model, integrations, and Permission Set inventory that ashley-fires reads before planning any feature.
 ---
 
 # /sf-init — Architecture Baseline Bootstrap
 
 This command creates (or refreshes) `architecture.md` at the project root. It is a one-time setup
-step per project — `sf-architect` reads this file on every plan afterward instead of re-scanning
+step per project — `ashley-fires` reads this file on every plan afterward instead of re-scanning
 the whole project from scratch each time.
 
-**This command follows `sf-architect`'s conventions exactly:** scan before asking, never fabricate
+**This command follows `ashley-fires`'s conventions exactly:** scan before asking, never fabricate
 a name that wasn't found, every clarification is a choice with an "Other" option — never a bare
 open text prompt.
 
@@ -34,7 +34,7 @@ Before asking anything, gather what can be found directly:
   field/label context, not guessed)
 - **Components** — LWC folders and Apex classes/triggers present
 - **LWC styling convention in use** — check existing component CSS: custom `:host` brand-token
-  block (`sf-dev` standard) vs `--slds-g-*` global hooks (`shaiden` convention) vs none yet
+  block (`channel-preston` standard) vs `--slds-g-*` global hooks (`shaiden` convention) vs none yet
 - **Automation layer balance** — rough split of Flow-triggered vs Apex-triggered automation found
 - **Integrations** — Named Credentials, external callouts referenced in Apex
 - **Permission Sets / Permission Set Groups** — existing inventory
@@ -61,7 +61,7 @@ Compile everything into `architecture.md` at the project root using the
 
 ### 4. Confirm
 
-Tell the user the file was created and that `sf-architect` will now read it automatically on
+Tell the user the file was created and that `ashley-fires` will now read it automatically on
 future plans instead of re-scanning the whole project each time.
 
 ---
@@ -117,7 +117,7 @@ _Last Scanned: YYYY-MM-DD HH:MM_
 ## Tech Stack Baseline
 
 - API Version: `[version]`
-- LWC Styling Convention: [sf-dev standard SLDS 2 / shaiden / mixed — note which components use which]
+- LWC Styling Convention: [channel-preston standard SLDS 2 / shaiden / mixed — note which components use which]
 - Primary Automation Layer: [Flow-first / Apex-heavy / mixed]
 
 ## Data Model Overview
@@ -154,11 +154,11 @@ by future /sf-init runs unless explicitly requested]
 
 ---
 
-## Relationship to sf-architect
+## Relationship to ashley-fires
 
-`sf-architect`'s Discovery phase checks for this file first and reads it instead of re-scanning
+`ashley-fires`'s Discovery phase checks for this file first and reads it instead of re-scanning
 the whole project on every plan. Only feature-specific touchpoints not already covered by the
-baseline get scanned fresh. If this file doesn't exist yet when `sf-architect` runs, it falls back
+baseline get scanned fresh. If this file doesn't exist yet when `ashley-fires` runs, it falls back
 to its own full scan and may suggest running `/sf-init` first for future efficiency.
 
 Re-run `/sf-init` periodically or after major structural changes (new integration, object model
