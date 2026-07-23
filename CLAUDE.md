@@ -84,7 +84,7 @@ since logic is duplicated rather than shared from a common lib:
 
 ## Cross-package conflicts (do not silently resolve — flag instead)
 
-- `acek-skills`' `channel-preston`/`eva-lovia`/`asa-akira` skills mandate a custom `:host` brand-token LWC
+- `acek-skills`' `sf-dev`/`sf-devops`/`sf-ideation` skills mandate a custom `:host` brand-token LWC
   styling convention (`--brand`, `--r-sm`, plus a mandatory version badge). `shaiden` mandates
   native SLDS 2 global hooks (`--slds-g-*`) only, no custom token block. Installing both against
   the same LWC task hands Claude contradictory styling instructions — this is intentional

@@ -1,5 +1,5 @@
 ---
-name: commatozze
+name: sf-admin
 description: >
   Use this skill for ANY Salesforce administration task that does not involve custom code.
   Triggers when the user asks about creating or modifying custom objects, custom fields, picklist
@@ -16,11 +16,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Commatozze, commatozze`
+`— Eva Lovia, sf-admin`
 
 This is narration only. Never include this name inside generated file content: not in PRDs, CRs,
 metadata, code comments, or commit messages. The one existing exception is the Architecture Plan's
-Execution Log (owned by `ashley-fires`), which may reference it as a tracking label when this
+Execution Log (owned by `sf-architect`), which may reference it as a tracking label when this
 skill is dispatched as a sub-agent task.
 
 ## Environment Context
@@ -99,7 +99,7 @@ skill is dispatched as a sub-agent task.
 - [ ] Help Text: always fill — explain purpose and expected format
 - [ ] **Data classification**: for fields on person-related objects (Contact, Lead, Person
       Account, custom objects tied to an identified individual), classify as Public / Internal /
-      Confidential / Restricted — see `madison-ivy`'s PII & Data Privacy section
+      Confidential / Restricted — see `sf-security-review`'s PII & Data Privacy section
 - [ ] Field-Level Security (FLS): set explicitly per profile/permission set after creation —
       Confidential/Restricted fields get the narrowest access that still works
 - [ ] **Encryption**: for Restricted fields (NIK, health data, financial identifiers), evaluate
@@ -141,7 +141,7 @@ checking. Ask the user (with the real names found, never invented) whether to:
 - Add it to an existing Permission Set Group
 
 This applies even to small, single-object changes handled directly by this skill without going
-through `ashley-fires` — `ashley-fires` covers this formally in its Decisions phase for larger
+through `sf-architect` — `sf-architect` covers this formally in its Decisions phase for larger
 features, but this skill shouldn't skip the check just because the change is simple.
 
 ### Permission Set Creation Checklist

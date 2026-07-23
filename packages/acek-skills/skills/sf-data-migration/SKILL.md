@@ -1,5 +1,5 @@
 ---
-name: britney-amber
+name: sf-data-migration
 description: >
   Use this skill for Salesforce data migration, bulk data operations, and data management tasks:
   designing import/export strategies, writing Data Loader automation scripts, upsert operations
@@ -16,11 +16,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Britney Amber, britney-amber`
+`— Britney Amber, sf-data-migration`
 
 This is narration only. Never include this name inside generated file content: not in migration
 plans, scripts, CRs, or commit messages. The one existing exception is the Architecture Plan's
-Execution Log (owned by `ashley-fires`), which may reference it as a tracking label when this
+Execution Log (owned by `sf-architect`), which may reference it as a tracking label when this
 skill is dispatched as a sub-agent task.
 
 ## Environment Context
@@ -362,7 +362,7 @@ Database.executeBatch(new AccountMigrationBatch(), 200); // 200 records per batc
 ## PII Handling During Migration
 
 The most common real-world privacy risk in data migration isn't the migration itself — it's
-**where the data ends up afterward.** Apply this alongside `madison-ivy`'s PII & Data
+**where the data ends up afterward.** Apply this alongside `sf-security-review`'s PII & Data
 Privacy section.
 
 - **Never load unmasked production PII into a sandbox** for testing/QA purposes without a

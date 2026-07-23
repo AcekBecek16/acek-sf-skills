@@ -1,5 +1,5 @@
 ---
-name: asa-akira
+name: sf-ideation
 description: >
   Use this skill when the user wants enhancement ideas for a SPECIFIC existing Apex class, LWC
   component, or a closed/approved PRD. Trigger when the user says "ide enhancement untuk
@@ -18,11 +18,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Asa Akira, asa-akira`
+`— Asa Akira, sf-ideation`
 
 This is narration only. Never include this name inside generated file content: not in ideas docs,
 PRDs, or commit messages. The one existing exception is the Architecture Plan's Execution Log
-(owned by `ashley-fires`), which may reference it as a tracking label when this skill is dispatched
+(owned by `sf-architect`), which may reference it as a tracking label when this skill is dispatched
 as a sub-agent task.
 
 ## Purpose
@@ -35,7 +35,7 @@ actually contains, not in assumption or invented examples.
 
 ## Anchor Requirement — Read This First
 
-**asa-akira never runs without an anchor.** An anchor is one of:
+**sf-ideation never runs without an anchor.** An anchor is one of:
 
 | Anchor Type   | What it is                                                     | Where to find it                  |
 | ------------- | -------------------------------------------------------------- | --------------------------------- |
@@ -161,7 +161,7 @@ using the project's actual stack, referencing the anchor by name.
 - **Always ground ideas in the existing stack** — LWC + Apex + Salesforce declarative tools.
   Do not suggest third-party tools unless explicitly asked.
 - **Follow whichever LWC styling convention the project actually uses** — check whether the
-  component follows `channel-preston`'s `:host` brand-token pattern or `shaiden`'s SLDS 2 global hooks, and
+  component follows `sf-dev`'s `:host` brand-token pattern or `shaiden`'s SLDS 2 global hooks, and
   match that convention rather than assuming one. Any Apex idea must follow bulkification +
   try-catch + CRUD check patterns.
 - **No gold-plating** — ideas should solve a real need, not add complexity for its own sake.
@@ -175,9 +175,9 @@ using the project's actual stack, referencing the anchor by name.
 - **Hand off, don't build.** This skill's job stops at generating and prioritizing ideas — it
   never writes code, metadata, or a plan file itself, and its output is intentionally **not
   persisted** to a file. For a **Big Bet** or any idea that needs a real architecture decision
-  (data model, Flow vs Apex, integration pattern, security model), hand off to `ashley-fires` — its
+  (data model, Flow vs Apex, integration pattern, security model), hand off to `sf-architect` — its
   plan file is where the idea becomes durable. For an idea that should become a formally scoped
-  feature with requirements and acceptance criteria first, hand off to `isla-summer` to write a PRD.
+  feature with requirements and acceptance criteria first, hand off to `sf-ba` to write a PRD.
   Don't try to make this skill's output do either job.
 
 ---
@@ -193,4 +193,4 @@ using the project's actual stack, referencing the anchor by name.
 | "apa next step dari PRD [name]?"                                 | Anchor = that PRD (confirm it's closed/approved). Run Extension Questions                                                   |
 | "prioritas enhancement mana yang paling worth it?"               | Requires a prior anchored ideation output in this conversation to rank — if none exists, ask which anchor to run first      |
 | "ada yang bisa diimprove dari sisi performance?" (no name given) | No anchor — scan project, ask which component to focus the Performance lens on                                              |
-| "let's build idea #[N]" / "jalankan ide nomor [N]"               | Hand off — don't execute here. Route to `ashley-fires` if it needs a technical decision, or `isla-summer` if it needs a PRD first |
+| "let's build idea #[N]" / "jalankan ide nomor [N]"               | Hand off — don't execute here. Route to `sf-architect` if it needs a technical decision, or `sf-ba` if it needs a PRD first |

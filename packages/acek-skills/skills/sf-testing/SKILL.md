@@ -1,5 +1,5 @@
 ---
-name: riley-reid
+name: sf-testing
 description: >
   Use this skill for ANY Salesforce test-related task: writing Apex test classes, building
   TestDataFactory, mocking HTTP callouts, mocking platform events, writing test assertions,
@@ -17,11 +17,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Riley Reid, riley-reid`
+`— Riley Reid, sf-testing`
 
 This is narration only. Never include this name inside generated file content: not in PRDs, CRs,
 Apex/LWC test code, code comments, or commit messages. The one existing exception is the
-Architecture Plan's Execution Log (owned by `ashley-fires`), which may reference it as a tracking
+Architecture Plan's Execution Log (owned by `sf-architect`), which may reference it as a tracking
 label when this skill is dispatched as a sub-agent task.
 
 ## Environment Context
@@ -390,7 +390,7 @@ sf apex run test \
 ## LWC Jest Testing
 
 Every new or modified LWC component needs a Jest test file — same discipline as Apex coverage,
-just not gated by a governor limit. This is separate from `eva-lovia`'s LWC review checklist
+just not gated by a governor limit. This is separate from `sf-devops`'s LWC review checklist
 (structural: naming, wire usage, JSDoc) and from `shaiden`'s design critique (visual/SLDS
 compliance) — this section owns whether the component's _behavior_ is actually tested.
 
@@ -477,7 +477,7 @@ describe('c-my-component', () => {
 - Mock every `@wire`/imperative Apex import — a Jest test that reaches a real Apex method is broken
 - Query only through `element.shadowRoot` — never reach into the component's internals directly
 - Assert on rendered output (DOM nodes, text, fired events), not on private component state
-- Run `npm run test:unit` before every PR — same gate as Apex coverage, checked in `eva-lovia`'s
+- Run `npm run test:unit` before every PR — same gate as Apex coverage, checked in `sf-devops`'s
   review
 
 ### Run Commands

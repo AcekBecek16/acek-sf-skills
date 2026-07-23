@@ -1,5 +1,5 @@
 ---
-name: isla-summer
+name: sf-ba
 description: >
   Use this skill when creating Business Analysis documents for Salesforce projects: PRDs (Product
   Requirements Documents), User Stories, Feature Specs, Functional Requirements, or any instruction
@@ -16,11 +16,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Isla Summer, isla-summer`
+`— Isla Summer, sf-ba`
 
 This is narration only. Never include this name inside generated file content: not in PRDs, specs,
 or commit messages. The one existing exception is the Architecture Plan's Execution Log (owned by
-`ashley-fires`), which may reference it as a tracking label when this skill is dispatched as a
+`sf-architect`), which may reference it as a tracking label when this skill is dispatched as a
 sub-agent task.
 
 ## Core Principle
@@ -36,16 +36,16 @@ Output format: **Markdown** (`.md`), stored in `instructions/` directory of the 
 
 **Before writing a PRD for anything that spans multiple roles or needs a real technical
 decision** (data model shape, Flow vs Apex, integration pattern, security model), consider
-running `ashley-fires` first, or right after — it consumes the PRD as input and produces the
-technical execution plan. `isla-summer` decides WHAT to build; `ashley-fires` decides HOW and in what
+running `sf-architect` first, or right after — it consumes the PRD as input and produces the
+technical execution plan. `sf-ba` decides WHAT to build; `sf-architect` decides HOW and in what
 order. Don't try to make the PRD carry both.
 
-**Admin Spec and Dev Spec are for work that will NOT go through `ashley-fires`** — e.g. handing
+**Admin Spec and Dev Spec are for work that will NOT go through `sf-architect`** — e.g. handing
 instructions to a human admin/dev directly, or documenting a declarative/code change after the
-fact for the record. If the work is going to be executed via an `ashley-fires` plan, skip writing
-these specs: `ashley-fires`'s Task Breakdown (with each task's Owner Skill and exact `Touches`)
+fact for the record. If the work is going to be executed via an `sf-architect` plan, skip writing
+these specs: `sf-architect`'s Task Breakdown (with each task's Owner Skill and exact `Touches`)
 already carries that execution detail, and a separately-written spec would just be a second copy
-of the same decisions to keep in sync by hand. Write the PRD, hand it to `ashley-fires`, and let
+of the same decisions to keep in sync by hand. Write the PRD, hand it to `sf-architect`, and let
 the plan carry the rest.
 
 ---
@@ -138,7 +138,7 @@ File path: `instructions/dev/YYYYMMDD-<feature-slug>-dev-spec.md`
 
 Flag any new/modified field on a person-related object (Contact, Lead, Person Account, or a
 custom object tied to an identified individual) in the **PII?** column — this feeds directly into
-`commatozze`'s field classification and `madison-ivy`'s Data Privacy checklist.
+`sf-admin`'s field classification and `sf-security-review`'s Data Privacy checklist.
 
 ## 8. UI/UX Notes
 

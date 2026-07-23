@@ -125,9 +125,9 @@ function installCommandToTarget(commandName, targetKey, cwd, aliases = {}) {
 	fs.writeFileSync(path.join(destDir, `${commandName}.md`), content);
 }
 
-// Sub-agents (.claude/agents/*.md) are dispatched by ashley-fires via the
-// Agent tool (subagent_type: <skill's technical id>) — one per owner skill,
-// same technical id as the matching skill folder. Like commands, they're a
+// Sub-agents (.claude/agents/*.md) are dispatched by sf-architect via the
+// Agent tool (subagent_type: sf-<skill>) — one per owner skill, same
+// technical id as the matching skill folder. Like commands, they're a
 // Claude-Code-only concept: Cursor/Windsurf/Copilot have no subagent
 // equivalent, so they only ever install to 'claude' format targets.
 function listAgents() {
@@ -346,7 +346,7 @@ async function runInteractiveInstall() {
 			);
 		}
 
-		if (skills.includes('ashley-fires') && TARGETS[targetKey].commandsDir) {
+		if (skills.includes('sf-architect') && TARGETS[targetKey].commandsDir) {
 			installCommandToTarget('sf-init', targetKey, cwd, aliases);
 			console.log(
 				`✅ /sf-init command installed to ${TARGETS[targetKey].label}`,
@@ -355,11 +355,11 @@ async function runInteractiveInstall() {
 	}
 	warnIfAliasesUnresolved(skills, aliases);
 	if (
-		skills.includes('ashley-fires') &&
+		skills.includes('sf-architect') &&
 		targets.some((t) => TARGETS[t].commandsDir)
 	) {
 		console.log(
-			'\n💡 Run /sf-init in your project to bootstrap architecture.md — ashley-fires reads it\n' +
+			'\n💡 Run /sf-init in your project to bootstrap architecture.md — sf-architect reads it\n' +
 				'   on every plan afterward instead of re-scanning the whole project each time.',
 		);
 	}
@@ -389,7 +389,7 @@ async function main() {
 					`✅ ${agentsToInstall.length} sub-agent(s) installed to ${TARGETS['claude-project'].label}`,
 				);
 			}
-			if (available.includes('ashley-fires')) {
+			if (available.includes('sf-architect')) {
 				installCommandToTarget(
 					'sf-init',
 					'claude-project',
@@ -400,7 +400,7 @@ async function main() {
 					`✅ /sf-init command installed to ${TARGETS['claude-project'].label}`,
 				);
 				console.log(
-					'\n💡 Run /sf-init in your project to bootstrap architecture.md — ashley-fires reads it\n' +
+					'\n💡 Run /sf-init in your project to bootstrap architecture.md — sf-architect reads it\n' +
 						'   on every plan afterward instead of re-scanning the whole project each time.',
 				);
 			}
@@ -425,7 +425,7 @@ async function main() {
 					`✅ Installed sub-agent: ${target} → ${TARGETS['claude-project'].label}`,
 				);
 			}
-			if (target === 'ashley-fires') {
+			if (target === 'sf-architect') {
 				installCommandToTarget(
 					'sf-init',
 					'claude-project',
@@ -436,7 +436,7 @@ async function main() {
 					`✅ /sf-init command installed to ${TARGETS['claude-project'].label}`,
 				);
 				console.log(
-					'\n💡 Run /sf-init in your project to bootstrap architecture.md — ashley-fires reads it\n' +
+					'\n💡 Run /sf-init in your project to bootstrap architecture.md — sf-architect reads it\n' +
 						'   on every plan afterward instead of re-scanning the whole project each time.',
 				);
 			}
@@ -454,7 +454,7 @@ async function main() {
 		}
 		const agents = listAgents();
 		if (agents.length > 0) {
-			console.log('\n🤖 Available sub-agents (dispatched by ashley-fires):');
+			console.log('\n🤖 Available sub-agents (dispatched by sf-architect):');
 			agents.forEach((a) => console.log(`  - ${a}`));
 		}
 	} else {
@@ -466,14 +466,14 @@ Usage:
 
   acek-skills list                 List available skills, commands, and sub-agents
 
-Each installed skill that has a matching sub-agent (same technical id, e.g. channel-preston) also installs
+Each installed skill that has a matching sub-agent (same technical id, e.g. sf-dev) also installs
 that sub-agent to .claude/agents/ (Claude Code targets only — Cursor/Windsurf/Copilot have no
-subagent equivalent). ashley-fires dispatches these during Phase 4 execution instead of following
+subagent equivalent). sf-architect dispatches these during Phase 4 execution instead of following
 their conventions itself.
 
-Installing ashley-fires also installs its companion /sf-init slash command (Claude Code targets
+Installing sf-architect also installs its companion /sf-init slash command (Claude Code targets
 only — Cursor/Windsurf/Copilot have no slash-command equivalent). Run /sf-init once per project
-to bootstrap architecture.md; ashley-fires reads it on every plan afterward.
+to bootstrap architecture.md; sf-architect reads it on every plan afterward.
 
 Some skills reference your Salesforce org aliases. For non-interactive installs,
 set these env vars to fill them in automatically:

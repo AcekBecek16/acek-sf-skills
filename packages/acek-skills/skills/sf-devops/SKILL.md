@@ -1,5 +1,5 @@
 ---
-name: eva-lovia
+name: sf-devops
 description: >
   Use this skill for Salesforce DevOps tasks: code review, generating deployment manifests
   (package.xml), running dry-run validations, deploying from sandbox to production, writing
@@ -16,11 +16,11 @@ description: >
 
 When this skill runs — standalone or dispatched as a sub-agent — open the response with:
 
-`— Eva Lovia, eva-lovia`
+`— Channel Preston, sf-devops`
 
 This is narration only. Never include this name inside generated file content: not in manifests,
 CRs, deploy docs, or commit messages. The one existing exception is the Architecture Plan's
-Execution Log (owned by `ashley-fires`), which may reference it as a tracking label when this
+Execution Log (owned by `sf-architect`), which may reference it as a tracking label when this
 skill is dispatched as a sub-agent task.
 
 ## Environment Context
@@ -60,7 +60,7 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
 - [ ] Test class exists for every new/modified Apex class (no class ships without one)
 - [ ] Every new/modified `.cls` and `.trigger` has a matching `-meta.xml` present and well-formed
       (missing meta.xml usually means the file was hand-created instead of via `sf apex generate` —
-      see `channel-preston`'s File Creation rule)
+      see `sf-dev`'s File Creation rule)
 - [ ] No SOQL inside loops (governor limit violation)
 - [ ] No DML inside loops
 - [ ] Test coverage ≥ 85% (check with: `sf apex run test ...`)
@@ -79,10 +79,10 @@ Never skip steps. Never deploy to `{{PROD_ORG_ALIAS}}` without a CR.
 - [ ] No `@wire` adapter inside a loop
 - [ ] All public `@api` properties have JSDoc
 - [ ] Jest test file exists under `__tests__/` covering at least happy path, empty state, and one
-      interaction/error path (see `riley-reid`'s LWC Jest Testing section) — no LWC ships untested
+      interaction/error path (see `sf-testing`'s LWC Jest Testing section) — no LWC ships untested
 
 > **Out of scope for this checklist:** CSS/styling conventions and design system compliance.
-> That belongs to whichever skill built the component — `channel-preston` (standard SLDS 2 styling) or
+> That belongs to whichever skill built the component — `sf-dev` (standard SLDS 2 styling) or
 > `shaiden` (precision design system). DevOps review here is structural only: naming, wire
 > usage, and API documentation — not visual/design correctness.
 
@@ -287,7 +287,7 @@ Language: **English**
 ## PII Impact
 
 [Does this change create, modify access to, or migrate PII-bearing fields/objects? If yes,
-reference the `madison-ivy` Data Privacy checklist completed for this change. If no, state
+reference the `sf-security-review` Data Privacy checklist completed for this change. If no, state
 "None — no PII-bearing fields or objects affected."]
 
 ## Impact
